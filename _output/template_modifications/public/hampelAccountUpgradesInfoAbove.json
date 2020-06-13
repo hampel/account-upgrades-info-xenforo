@@ -1,0 +1,9 @@
+{
+    "template": "account_upgrades",
+    "description": "Add info above available upgrades list",
+    "execution_order": 10,
+    "enabled": true,
+    "action": "str_replace",
+    "find": "<xf:if is=\"$available is not empty\">",
+    "replace": "<xf:if contentcheck=\"true\">\n\t<div class=\"block\">\n\t\t<div class=\"block-container\">\n\t\t\t<xf:if contentcheck=\"true\">\n\t\t\t\t<h2 class=\"block-header\">\n\t\t\t\t\t<xf:contentcheck>\n\t\t\t\t\t\t{{ $xf.options.hampelAccountUpgradesInfoTitleBefore }}\n\t\t\t\t\t</xf:contentcheck>\n\t\t\t\t</h2>\n\t\t\t</xf:if>\n\t\t\n\t\t\t<div class=\"block-body block-row\">\n\t\t\t\t<xf:contentcheck>\n\t\t\t\t\t{$xf.options.hampelAccountUpgradesInfoBodyBefore|raw}\n\t\t\t\t</xf:contentcheck>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</xf:if>\t\n\n$0"
+}

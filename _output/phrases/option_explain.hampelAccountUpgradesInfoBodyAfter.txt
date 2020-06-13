@@ -1,0 +1,1 @@
+Body for the info block that displays after the list of available upgrades. Leave blank to hide the block. You may use HTML.

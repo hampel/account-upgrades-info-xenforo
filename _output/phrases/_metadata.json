@@ -1,0 +1,62 @@
+{
+    "option.hampelAccountUpgradesInfoBodyAfter.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "f148cae03e919ac4cdf4f8209a27cdaf"
+    },
+    "option.hampelAccountUpgradesInfoBodyBefore.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "ebfbdebc7c7998ce0d2f416870bfc7d5"
+    },
+    "option.hampelAccountUpgradesInfoTitleAfter.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "d20772f33ee98ab2f4a41c89ee1bb1fd"
+    },
+    "option.hampelAccountUpgradesInfoTitleBefore.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "e9256eb7656b4140876e8029b1bca1c1"
+    },
+    "option_explain.hampelAccountUpgradesInfoBodyAfter.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "5fe88ee605178bf79e8f3a940a31e43d"
+    },
+    "option_explain.hampelAccountUpgradesInfoBodyBefore.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "ac8004f7b51f7b275d02702f1e40881b"
+    },
+    "option_explain.hampelAccountUpgradesInfoTitleAfter.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "67247ca3dfee1e665e0a16e1874c94e1"
+    },
+    "option_explain.hampelAccountUpgradesInfoTitleBefore.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "578f6b9973fdb553760b7817224d8785"
+    },
+    "option_group.hampelAccountUpgradesInfo.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "f38ffe426f2f2a2fedb46fac796274ee"
+    },
+    "option_group_description.hampelAccountUpgradesInfo.txt": {
+        "global_cache": false,
+        "version_id": 1000031,
+        "version_string": "1.0.0 Beta 1",
+        "hash": "aa1aaa879492747dc31c76c0e3d4486b"
+    }
+}
