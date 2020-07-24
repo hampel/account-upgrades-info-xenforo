@@ -7,9 +7,9 @@
     "dev": "Simon Hampel",
     "dev_url": "https://bitbucket.org/hampel/",
     "faq_url": "",
-    "support_url": "https://bitbucket.org/hampel/account-upgrades-info/issues",
+    "support_url": "https://bitbucket.org/hampel/account-upgrades-info-xenforo/issues",
     "extra_urls": {
-        "Git Repository": "https://bitbucket.org/hampel/account-upgrades-info",
+        "Git Repository": "https://bitbucket.org/hampel/account-upgrades-info-xenforo",
         "Twitter": "https://twitter.com/SimonHampel"
     },
     "require": [],
