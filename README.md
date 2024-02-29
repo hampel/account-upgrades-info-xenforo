@@ -1,11 +1,11 @@
-Account Upgrades Info for XenForo 2.1
-=====================================
+Account Upgrades Info for XenForo 2
+===================================
 
-This XenForo 2.1 addon lets you add information to the Account upgrades page
+This XenForo addon lets you add information to the Account upgrades page
 
-By [Simon Hampel](https://twitter.com/SimonHampel).
+By [Simon Hampel](https://xenforo.com/community/members/sim.4264/).
 
 Requirements
 ------------
 
-This addon has been tested on XenForo 2.1
+This addon has been tested on XenForo 2.1 and 2.2b2
