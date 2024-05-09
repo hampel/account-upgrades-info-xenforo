@@ -11,5 +11,5 @@ By [Simon Hampel](https://xenforo.com/community/members/sim.4264/)
 Requirements
 ------------
 
-This addon has been tested on XenForo 2.1 and 2.2
+This addon has been tested on XenForo 2.1, 2.2 & 2.3
 
