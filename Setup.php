@@ -16,7 +16,9 @@ class Setup extends AbstractSetup
 
     public function postUpgrade($previousVersion, array &$stateChanges)
     {
-        $this->enqueuePostUpgradeCleanUp();
+        if (\XF::$versionId >= 2030000) { // XF 2.3+
+            $this->enqueuePostUpgradeCleanUp();
+        }
     }
 
     public function uninstall(array $stepParams = [])
