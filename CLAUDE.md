@@ -183,9 +183,9 @@ every platform. If you commit from a Windows client with `core.autocrlf=true`, t
 longer rewrite this tree.
 
 **If a whole-tree diff appears anyway — every tracked file modified, identical content on both
-sides — do not commit it, and do not `git add -A`.** The two artefacts look the same in `git status` and
-have opposite fixes; `git diff --summary` tells them apart. Prove nothing real is buried before
-discarding anything:
+sides — do not commit it, and do not `git add -A`.** The two artefacts look the same in
+`git status` and have opposite fixes; `git diff --summary` tells them apart. Prove nothing real is
+buried before discarding anything:
 
 ```bash
 git diff --summary                  # non-empty => executable-bit artefact, a different fix
