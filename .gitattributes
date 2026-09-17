@@ -1,0 +1,37 @@
+# Normalise line endings to LF, in the repository and in the working tree.
+#
+# This checkout lives on the Linux filesystem and is read by PHP there, but is
+# also committed through SourceTree on Windows over \\wsl$\. Git for Windows
+# defaults to core.autocrlf=true, which wrote CRLF into the Linux tree and made
+# 20 of the 30 tracked files show as modified with no real change. The ten that
+# stayed clean are the _output/phrases/*.txt files - one line, no terminator,
+# nothing for a Windows client to rewrite.
+#
+#   text=auto  store LF in the repository, whatever the committing platform does
+#   eol=lf     check LF back out, so core.autocrlf on the Windows side cannot
+#              reintroduce CRLF on disk
+#
+# Every tracked file here is text (PHP, JSON, Markdown, phrases), so one blanket
+# rule covers the repository.
+* text=auto eol=lf
+
+# Guard the binary types an add-on may later ship (icons, screenshots) against
+# being mangled by the rule above. None are tracked today.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.zip  binary
+
+# Keep development-only files out of `git archive` output - GitHub's "Download ZIP".
+# This is one of three separate exclusion surfaces and covers none of the others:
+#   the git repo        -> .gitignore       (CLAUDE.local.md)
+#   git archive output  -> here
+#   the XenForo zip     -> build.json `rm`  (the builder walks the filesystem, not git)
+/CLAUDE.md        export-ignore
+/CLAUDE.local.md  export-ignore
+/TESTING.md       export-ignore
+/.gitattributes   export-ignore
+/.gitignore       export-ignore
