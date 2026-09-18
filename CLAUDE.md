@@ -115,6 +115,18 @@ together if that is ever done. Note the guard is not itself an argument for rais
 house boilerplate that most of the sibling add-ons carry at floors from 2.0 upwards, not a shim
 written because this add-on needed one.
 
+## Never upgrade this add-on in place over the checkout
+
+`postUpgrade()` queues `XF\Job\FileCleanUp`, and for an add-on that job's allowed deletion path is
+the **whole add-on directory** — it removes every file `hashes.json` does not list. XenForo
+protects only `_output/`, `hashes.json`, `addon.json`, `build.json`, `_files/` and `_releases/`,
+so the README, CHANGELOG, LICENSE, `TESTING.md`, the dotfiles and `.git` are all eligible.
+
+It is inert today only because `hashes.json` is generated into the build output and never exists
+in a checkout, and the job returns immediately without one. Unzipping a release over the working
+copy creates that file and arms it. Use a throwaway installation for any upgrade test;
+`TESTING.md` has the detail.
+
 ## Commands
 
 Run from this directory — it is the git repo. `cmd.php` resolves the install from its own

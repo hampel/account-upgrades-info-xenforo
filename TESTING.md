@@ -68,6 +68,24 @@ the resource description changed to match.
 on `XF\AddOn\AbstractSetup` before XenForo 2.3, so removing the `\XF::$versionId >= 2030000` test
 makes every upgrade on a 2.2 install a fatal.
 
+**Never upgrade this add-on in place over a development checkout.** `enqueuePostUpgradeCleanUp()`
+queues `XF\Job\FileCleanUp`, whose allowed deletion path for an add-on is the *entire* add-on
+directory: it deletes every file there that `hashes.json` does not list. XenForo protects
+`_output/`, `hashes.json`, `addon.json`, `build.json`, `_files/` and `_releases/` — and nothing
+else, so `README.md`, `CHANGELOG.md`, `LICENSE.md`, `TESTING.md`, the dotfiles and `.git` itself
+are all eligible. `getRecursiveDirectoryIterator` passes `SKIP_DOTS`, which skips `.` and `..`,
+not dot-directories.
+
+What prevents this in practice is incidental rather than designed: `hashes.json` is generated into
+the build output and never exists in a checkout, and the job returns immediately when it is
+missing. On a user's installed copy the manifest is present and none of those files are, so the
+cleanup does its intended work safely.
+
+**The hazard is the gap between those two states, and the obvious way to test an upgrade walks
+into it.** `ExtractorService::copyFiles()` writes a release zip over the target file by file,
+which puts `hashes.json` into the directory. Do the upgrade test on a throwaway installation, not
+on a working copy.
+
 ## Automated
 
 Run from the installation root unless stated otherwise.
@@ -175,11 +193,22 @@ upgrade list, because that is what an in-process render can build without creati
 forum that has purchasable upgrades should be checked with a real one defined, confirming the
 "before" block sits above the list and the "after" block below it.
 
-**The upgrade path from a published release.** Install the previous release's zip, then upgrade to
-the new one. Note a standing XenForo limitation while doing it: `ExtractorService::copyFiles()`
-uses the changeset only as a skip filter and never acts on its `delete` entries, so **any file the
-new version removed will still be on disk afterwards**. A fresh install and an upgraded install
-are different filesystems, and nothing offline reveals the difference.
+**The upgrade path from a published release** — on a throwaway installation, for the reason in
+*Fragile points*, never over a working copy. Install the previous release's zip, then upgrade to
+the new one.
+
+Two XenForo behaviours to watch while doing it. `ExtractorService::copyFiles()` uses the changeset
+only as a skip filter and never acts on its `delete` entries, so **any file the new version
+removed will still be on disk afterwards** — a fresh install and an upgraded install are different
+filesystems, and nothing offline reveals the difference. And on an installation with development
+mode enabled the upgrade imports the working copy's `_output/` instead of the zip's data, silently;
+the tell is `All data imported.` in the output where `Importing add-on data` belongs.
+
+**When this test can be skipped, and why it can be here.** `Setup.php` declares no version-gated
+`upgrade<versionId>Step<n>()` methods at all, so the install-works-but-upgrade-fails failure
+cannot occur — that is structural rather than untested. And nothing has ever been removed from
+this add-on's shipped file set, so `FileCleanUp` has nothing to act on either. Both statements
+need rechecking the moment a gated step or a deleted file appears.
 
 **The support URLs in `addon.json`.** The three xenforo.com links return 403 to `curl`, which is
 bot protection rather than a dead link, so they cannot be checked from a script. Open them in a
