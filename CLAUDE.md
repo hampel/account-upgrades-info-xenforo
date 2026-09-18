@@ -49,10 +49,20 @@ either one: because each block is prepended *outside* the `<xf:if>` it anchors o
 blocks render even when the list they sit against is empty. That is intended — the "before" text
 is the one a member with no upgrades available most needs to see.
 
+**Both insertion points are inside the core template's own outer `<xf:contentcheck>`, so the
+add-on suppresses XenForo's "there are currently no purchasable user upgrades" message.** Anything
+the add-on renders satisfies that contentcheck, and the core's `<xf:else />` branch never fires — a
+member with nothing available and nothing purchased sees the info blocks and no list. There is no
+earlier anchor outside that contentcheck, so this is inherent rather than a choice, and it is why
+the shipped default for the "before" body does not refer to a list below it. `TESTING.md` carries
+the render harness that demonstrates it.
+
 **Each block is wrapped in `<xf:if contentcheck="true">` with the option inside `<xf:contentcheck>`,
 so an empty option hides the block rather than rendering an empty bordered panel.** The title is
 checked separately from the body, which is why a body with no title renders a headerless block
-instead of an empty `block-header`. The body is output `|raw` — the option explain phrases say
+instead of an empty `block-header`. **The reverse does not hold: a title with no body renders
+nothing at all**, because only the body's contentcheck belongs to the outer
+conditional. The body is output `|raw` — the option explain phrases say
 "You may use HTML", so the values are trusted admin input by design. Do not add escaping without
 changing the phrases and the option documentation to match.
 

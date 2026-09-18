@@ -48,6 +48,18 @@ has no upgrades.
 `<xf:if contentcheck="true">` with the option inside `<xf:contentcheck>`. The title is checked
 separately from the body, so a body with no title deliberately renders a block with no header.
 
+**The body gates its block; the title does not.** Setting only a title — and no body — renders
+nothing at all, silently. That is documented on the body options' explain text ("Leave blank to
+hide the block") and not on the titles', which is the more surprising direction.
+
+**The add-on suppresses XenForo's "there are currently no purchasable user upgrades" message.**
+Both modifications insert *inside* the core template's outer `<xf:contentcheck>`, so anything they
+render satisfies it and the `<xf:else />` branch never fires. A member with nothing available and
+nothing purchased therefore sees the info blocks and no list, with no indication that there is
+nothing to choose. This is inherent to where the modifications can anchor — there is no earlier
+insertion point outside that contentcheck — and it is why the shipped default for the "before"
+body does not refer to a list below it.
+
 **The body is output `|raw`.** The option explain phrases promise HTML, so the values are trusted
 administrator input by design. Escaping it would be a behaviour change and needs the phrases and
 the resource description changed to match.
@@ -102,6 +114,37 @@ php ../../../../cmd.php xf-dev:import --addon=Hampel/AccountUpgradesInfo
 git status --short          # want no output
 ```
 
+**Do the option combinations render as intended?** The page can be rendered in-process, without a
+browser and without writing anything, which covers the combination matrix that would otherwise be
+a manual pass. The `addDefaultParam("xf", ...)` line is the non-obvious part — without it
+`$xf.options` resolves to null, every `contentcheck` sees empty content, and the blocks silently
+do not render, which looks exactly like a broken add-on.
+
+```bash
+php -r '
+require("src/XF.php"); XF::start(__DIR__);
+$app = XF::setupApp("XF\\Pub\\App");
+$app->templater()->setStyle($app->style(1) ?: $app->style(0));
+XF::setLanguage($app->language(0));
+$app->templater()->addDefaultParam("xf", $app->getGlobalTemplateData(null));
+$o = XF::options(); $P = "hampelAccountUpgradesInfo";
+$params = [
+    "available" => $app->em()->getBasicCollection([]),
+    "purchased" => $app->em()->getBasicCollection([]),
+    "canPurchase" => true,
+];
+foreach ([["", "", "", ""], ["About upgrades", "Some text", "", ""], ["", "", "Refund policy", ""]] as $set)
+{
+    [$o->{$P."TitleBefore"}, $o->{$P."BodyBefore"}, $o->{$P."TitleAfter"}, $o->{$P."BodyAfter"}] = $set;
+    $h = $app->templater()->renderTemplate("public:account_upgrades", $params);
+    printf("blocks=%d  no-upgrades-message=%d\n",
+        substr_count($h, "class=\"block\""), substr_count($h, "blockMessage"));
+}'
+```
+
+Expected, against an empty upgrade list: `0/1`, then `1/0`, then `0/1`. The middle row is the
+message-suppression characteristic above; the last is a title with no body rendering nothing.
+
 **Does the release zip exclude the development files?** `build.json` removes them before the `mv`
 that promotes the remaining root `*.md` to the zip root, and an `exec` step cannot fail a build —
 `ReleaseBuilderService::execCmds()` discards the exit status — so verify the artifact, never the
@@ -127,9 +170,10 @@ the "after" block below it.
 page and invisible to every check above. Look at the options page in the control panel as well as
 the front end.
 
-**The empty-option and empty-list combinations.** Four states worth seeing rather than reasoning
-about: both options set, only the title set, only the body set, and neither — against an account
-with upgrades available and one without.
+**The case with upgrades actually available.** Everything above is exercised against an empty
+upgrade list, because that is what an in-process render can build without creating forum data. A
+forum that has purchasable upgrades should be checked with a real one defined, confirming the
+"before" block sits above the list and the "after" block below it.
 
 **The upgrade path from a published release.** Install the previous release's zip, then upgrade to
 the new one. Note a standing XenForo limitation while doing it: `ExtractorService::copyFiles()`
