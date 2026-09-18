@@ -89,13 +89,21 @@ SELECT modification_key, status FROM xf_template_modification_log l
 added in 2.3 — so removing the guard makes every upgrade on an older install a fatal. Do not
 "tidy" it away.
 
-## No XenForo version floor is declared
+## The floor is XenForo 2.2.0, and it is set by what can be tested
 
-`addon.json` has `"require": []` — no `XF` entry, no `php` entry. So the add-on installs on any
-XF 2.x the install itself allows, which is consistent with the 2.3 guard above but means nothing
-declares what it is actually tested against. **If a floor is ever set, it has to be set in
-`addon.json` and the README together**, and setting one at 2.3 or above would make the guard dead
-code that should go with it.
+`addon.json` declares `"XF": ["2020070", "XenForo 2.2.0+"]` and no `php` key — the add-on uses
+nothing above whatever PHP floor the XenForo version in use already enforces. The README states
+the same thing; the two drift independently, because nothing validates one against the other.
+
+**2.2 is a tested floor rather than an assumed one.** Both template modifications anchor on
+`find` strings that occur exactly once in the `account_upgrades` template of 2.2 and of 2.3
+alike, so the add-on's entire runtime surface works on both. Below 2.2 is untested, which is the
+whole reason the floor is not lower.
+
+**Raising the floor to 2.3 would make the guard above dead code**, and the two changes belong
+together if that is ever done. Note the guard is not itself an argument for raising it: it is
+house boilerplate that most of the sibling add-ons carry at floors from 2.0 upwards, not a shim
+written because this add-on needed one.
 
 ## Commands
 

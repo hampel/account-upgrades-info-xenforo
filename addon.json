@@ -12,6 +12,11 @@
         "Addon": "https://xenforo.com/community/resources/account-upgrades-info.7856/",
         "Git Repository": "https://github.com/hampel/account-upgrades-info-xenforo"
     },
-    "require": [],
+    "require": {
+        "XF": [
+            "2020070",
+            "XenForo 2.2.0+"
+        ]
+    },
     "icon": "fa-credit-card"
 }

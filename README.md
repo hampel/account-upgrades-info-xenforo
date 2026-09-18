@@ -3,6 +3,9 @@ Account Upgrades Info for XenForo 2
 
 This XenForo addon lets you add information to the Account upgrades page
 
+Requires XenForo 2.2.0 or later. It has no PHP requirement of its own beyond whatever the
+XenForo version in use already enforces.
+
 By [Simon Hampel](https://xenforo.com/community/members/sim.4264/)
 
 * [Addon: Account Upgrades Info](https://xenforo.com/community/resources/account-upgrades-info.7856/)
