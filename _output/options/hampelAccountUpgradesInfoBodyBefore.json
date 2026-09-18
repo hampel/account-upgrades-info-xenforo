@@ -5,6 +5,7 @@
     "sub_options": [],
     "validation_class": "",
     "validation_method": "",
+    "advanced": false,
     "default_value": "Choose an upgrade from the list below",
     "relations": {
         "hampelAccountUpgradesInfo": 2
