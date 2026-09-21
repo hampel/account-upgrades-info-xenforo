@@ -29,11 +29,11 @@ Both modifications are `str_replace` at execution order 10, and both end their r
 
 ## Fragile points
 
-**The `find` strings are the whole risk.** A XenForo upgrade that rewords `account_upgrades`
-leaves the modification unable to match, and the failure is silent: the upgrade succeeds, the
-template modification log records the miss, and the info blocks simply stop appearing. Nothing
-errors and no user is told. Check the strings after every XenForo upgrade, not only after a change
-to this add-on.
+**The `find` strings are the whole risk.** A XenForo upgrade that rewords `account_upgrades` leaves
+the modification unable to match, and the failure is silent: the upgrade succeeds, the template
+modification log records it as `status = 'ok'` with an apply count of 0, and the info blocks simply
+stop appearing. Nothing errors and no user is told. Check the strings after every XenForo upgrade,
+not only after a change to this add-on.
 
 **"Below" is implemented on the purchased block, and that is the only place it could go.** The
 available-upgrades list has no closing anchor unique enough to match, so the next block down is the
@@ -113,12 +113,15 @@ means it will apply more than once.
 **Did they actually apply?** After any import, upgrade or XenForo upgrade:
 
 ```sql
-SELECT modification_key, status FROM xf_template_modification_log l
+SELECT modification_key, status, SUM(apply_count) AS applied FROM xf_template_modification_log l
   JOIN xf_template_modification m USING (modification_id)
- WHERE m.addon_id = 'Hampel/AccountUpgradesInfo';
+ WHERE m.addon_id = 'Hampel/AccountUpgradesInfo'
+ GROUP BY modification_key, status;
 ```
 
-Both rows must read `ok`.
+`applied` must be at least 1 for both. **Do not read `status` as the answer**: a `str_replace`
+that matched nothing is logged as `ok` with an apply count of 0, so a broken modification and a
+working one show the same status.
 
 **Does the result compile?** A modification can apply and still produce invalid template syntax.
 The compiled copies under `internal_data/code_cache/templates/*/*/public/account_upgrades.php`

@@ -67,8 +67,8 @@ conditional. The body is output `|raw` — the option explain phrases say
 changing the phrases and the option documentation to match.
 
 **Before editing either `find` string, confirm it still matches the target version's template
-exactly once.** A modification that stops matching does not fail the upgrade — it logs and the
-feature silently disappears:
+exactly once.** A modification that stops matching does not fail the upgrade — the feature
+silently disappears:
 
 ```bash
 php -r '
@@ -84,12 +84,16 @@ foreach (["<xf:if is=\"\$available is not empty\">", "<xf:if is=\"\$purchased is
 ```
 
 Run it from the install root. After an import, check the modifications applied rather than
-assuming — `status` should be `ok` for both:
+assuming — **`applied` must be at least 1 for both, and `status` proves nothing.** XenForo logs a
+`str_replace` that matched nothing as `status = 'ok'` with an `apply_count` of 0:
+`TemplateModificationRepository::applyTemplateModifications()` records the `substr_count()` as an
+integer, and `Template::updateTemplateModificationLog()` writes any integer as `ok`.
 
 ```sql
-SELECT modification_key, status FROM xf_template_modification_log l
+SELECT modification_key, status, SUM(apply_count) AS applied FROM xf_template_modification_log l
   JOIN xf_template_modification m USING (modification_id)
- WHERE m.addon_id = 'Hampel/AccountUpgradesInfo';
+ WHERE m.addon_id = 'Hampel/AccountUpgradesInfo'
+ GROUP BY modification_key, status;
 ```
 
 ## The XF 2.3 guard in `Setup.php` is load-bearing
