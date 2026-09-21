@@ -2,10 +2,11 @@
 
 What this add-on touches, what breaks quietly, and which checks a session can settle on its own.
 
-There is no test suite, deliberately. The add-on has no logic to unit test — its entire behaviour
-is XenForo substituting four option values into two blocks of template markup — and the failure
-that actually happens needs a live install's template table to detect, which PHPUnit cannot reach.
-The `Automated` checks below are that coverage.
+The add-on has no logic to unit test — its entire behaviour is XenForo substituting four option
+values into two blocks of template markup — so the suite is Feature tests only, and each reads the
+installed add-on out of the forum: the template modification log, the compiled template, the
+option values. The `Automated` section starts with it; the manual commands after it are for an
+installation the suite is not set up on, such as a second XenForo version.
 
 ## Surfaces
 
@@ -17,7 +18,8 @@ The `Automated` checks below are that coverage.
 | `Setup.php` | no install, upgrade or uninstall steps; `postUpgrade()` only |
 
 No class extensions, no code event listeners, no templates of its own, no routes, no permissions,
-no entities, no schema, no JavaScript and no Composer dependencies.
+no entities, no schema, no JavaScript and no runtime Composer dependencies — `composer.json` holds
+the test suite's dev dependencies only.
 
 Both modifications are `str_replace` at execution order 10, and both end their replacement with
 `$0`, so each block is **prepended** to the text it matches:
@@ -88,7 +90,21 @@ on a working copy.
 
 ## Automated
 
-Run from the installation root unless stated otherwise.
+**The suite**, from the add-on directory:
+
+```bash
+composer install            # first time; vendor/ is gitignored
+vendor/bin/phpunit
+```
+
+It covers both modifications applying, the option combinations against an empty upgrade list, and
+`postUpgrade()`'s queueing of `FileCleanUp` — each test proved by breaking the behaviour it names
+and watching it fail. **It reads the forum, not the working copy**: after editing `_output/`, run
+the scoped import first, or the suite tests the previous version. Run it after every XenForo
+upgrade as well as after a change here, since that is when a `find` string stops matching.
+
+The rest of this section is the same ground by hand, run from the installation root unless stated
+otherwise.
 
 **Do the modifications still match the target template, exactly once each?** This is the check that
 catches the silent failure above. Run it against every XenForo version the add-on claims to
@@ -135,45 +151,23 @@ php ../../../../cmd.php xf-dev:import --addon=Hampel/AccountUpgradesInfo
 git status --short          # want no output
 ```
 
-**Do the option combinations render as intended?** The page can be rendered in-process, without a
-browser and without writing anything, which covers the combination matrix that would otherwise be
-a manual pass. The `addDefaultParam("xf", ...)` line is the non-obvious part — without it
-`$xf.options` resolves to null, every `contentcheck` sees empty content, and the blocks silently
-do not render, which looks exactly like a broken add-on.
+**Do the option combinations render as intended?** `tests/Feature/AccountUpgradesPageTest.php`
+renders `account_upgrades` against an empty upgrade list for each combination worth pinning. A
+render outside the test framework needs the `xf` template parameter installed by hand —
+`$app->templater()->addDefaultParam('xf', $app->getGlobalTemplateData(null))` under
+`XF\Pub\App` — or `$xf.options` resolves to null, every `contentcheck` sees empty content, and the
+blocks silently do not render, which looks exactly like a broken add-on.
 
-```bash
-php -r '
-require("src/XF.php"); XF::start(__DIR__);
-$app = XF::setupApp("XF\\Pub\\App");
-$app->templater()->setStyle($app->style(1) ?: $app->style(0));
-XF::setLanguage($app->language(0));
-$app->templater()->addDefaultParam("xf", $app->getGlobalTemplateData(null));
-$o = XF::options(); $P = "hampelAccountUpgradesInfo";
-$params = [
-    "available" => $app->em()->getBasicCollection([]),
-    "purchased" => $app->em()->getBasicCollection([]),
-    "canPurchase" => true,
-];
-foreach ([["", "", "", ""], ["About upgrades", "Some text", "", ""], ["", "", "Refund policy", ""]] as $set)
-{
-    [$o->{$P."TitleBefore"}, $o->{$P."BodyBefore"}, $o->{$P."TitleAfter"}, $o->{$P."BodyAfter"}] = $set;
-    $h = $app->templater()->renderTemplate("public:account_upgrades", $params);
-    printf("blocks=%d  no-upgrades-message=%d\n",
-        substr_count($h, "class=\"block\""), substr_count($h, "blockMessage"));
-}'
-```
-
-Expected, against an empty upgrade list: `0/1`, then `1/0`, then `0/1`. The middle row is the
-message-suppression characteristic above; the last is a title with no body rendering nothing.
-
-**Does the release zip exclude the development files?** `build.json` removes them before the `mv`
+**Does the release zip exclude the development files?** Build it from a checkout with the dev
+dependencies installed, since that is the case that matters: the builder copies `vendor/` like
+anything else. `build.json` removes them before the `mv`
 that promotes the remaining root `*.md` to the zip root, and an `exec` step cannot fail a build —
 `ReleaseBuilderService::execCmds()` discards the exit status — so verify the artifact, never the
 exit code:
 
 ```bash
 unzip -Z1 _releases/<file>.zip | grep -v '^upload/'          # want README, CHANGELOG, LICENSE
-unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing'   # want no output
+unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|composer\.'   # want no output
 unzip -Z1 _releases/<file>.zip | grep -E '(^|/)\.[^/]*'      # dotfiles; want no output
 ```
 

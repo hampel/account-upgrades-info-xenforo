@@ -54,8 +54,8 @@ add-on suppresses XenForo's "there are currently no purchasable user upgrades" m
 the add-on renders satisfies that contentcheck, and the core's `<xf:else />` branch never fires — a
 member with nothing available and nothing purchased sees the info blocks and no list. There is no
 earlier anchor outside that contentcheck, so this is inherent rather than a choice, and it is why
-the shipped default for the "before" body does not refer to a list below it. `TESTING.md` carries
-the render harness that demonstrates it.
+the shipped default for the "before" body does not refer to a list below it.
+`tests/Feature/AccountUpgradesPageTest.php` pins it.
 
 **Each block is wrapped in `<xf:if contentcheck="true">` with the option inside `<xf:contentcheck>`,
 so an empty option hides the block rather than rendering an empty bordered panel.** The title is
@@ -137,6 +137,9 @@ Run from this directory — it is the git repo. `cmd.php` resolves the install f
 location rather than the working directory, so the relative path below works unchanged.
 
 ```bash
+composer install                                                           # first time; vendor/ is gitignored
+vendor/bin/phpunit                                                         # the whole suite
+vendor/bin/phpunit --filter AccountUpgradesPageTest                        # one class
 php ../../../../cmd.php xf-dev:import --addon=Hampel/AccountUpgradesInfo   # after editing _output/
 php ../../../../cmd.php xf-addon:sync-json Hampel/AccountUpgradesInfo      # after editing addon.json
 php ../../../../cmd.php xf:addon-upgrade Hampel/AccountUpgradesInfo        # apply a version bump
@@ -147,9 +150,31 @@ php ../../../../cmd.php xf-addon:build-release Hampel/AccountUpgradesInfo  # rel
 optional — omitting it exports every add-on in the install, not just this one.
 `xf-addon:build-release` calls the scoped `xf-addon:export` internally, which is safe.
 
-There is no test suite and no `composer.json`: nothing here is unit-testable, because there is no
-code to test. Verification is the two checks above plus loading `/account/upgrades` and confirming
-both blocks render. `TESTING.md` carries the manual checks.
+## Tests read the forum, not the working copy
+
+The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.4`, and every test reads the
+installed add-on out of the forum's database — the template modification log, the compiled
+`account_upgrades` template, the option values. **An edit to `_output/` is invisible to it until
+`xf-dev:import` has run.** A red run after editing a modification usually means the import was
+skipped, not that the change is wrong.
+
+Three things it covers, each proved by breaking the behaviour and watching the named test fail:
+
+- **both modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
+  for a `find` that matched nothing;
+- **the option combinations** against an empty upgrade list, including the suppressed "no
+  purchasable upgrades" message and a title with no body rendering nothing;
+- **`postUpgrade()`** queueing `FileCleanUp` on 2.3, and not queueing it when `\XF::$versionId` is
+  below 2.3. On a 2.3 install that second test proves the guard is present, not that 2.2 would
+  load the file.
+
+`$addonsToLoad` names only this add-on. Other add-ons on a forum may vendor their own PHPUnit, and
+without the isolation its classes can resolve out of someone else's `vendor/`. It does not remove
+the template modifications, which are compiled into the database rather than applied by a
+listener. `composer.json` holds dev dependencies only — nothing here uses a runtime `vendor/`, so
+`vendor/` must never reach a release.
+
+`TESTING.md` carries what the suite cannot do.
 
 ## Versioning
 
@@ -167,25 +192,28 @@ available at all, because `AddOn::canUpgrade()` requires a strictly greater `ver
 
 ## Build and release
 
-`build.json` has no `additional_files` and no Composer step — two `exec` lines that delete the
-dev-only files from the upload tree and then move every remaining root `*.md` out of it, so
-`README`, `CHANGELOG` and `LICENSE` land at the zip root rather than being uploaded to a user's
-server.
+`build.json` has no `additional_files` and no Composer step. Its `exec` lines delete the dev-only
+files from the upload tree — Composer's files, `phpunit.xml`, `tests/`, the whole `vendor/`, both
+PHPUnit cache names and the three dev-only root documents — and then move every remaining root
+`*.md` out of it, so `README`, `CHANGELOG` and `LICENSE` land at the zip root rather than being
+uploaded to a user's server.
 
 **The `rm` must stay before the `mv`.** Placed after it, it silently does nothing: the file has
 already been renamed into `_build/`, and the error that would have told you is discarded anyway —
 `exec` steps **cannot fail a build**, because `ReleaseBuilderService::execCmds()` ends in
 `passthru()` and throws the exit status away.
 
-**The `rm` line names all three dev-only files — `TESTING.md`, `CLAUDE.md`, `CLAUDE.local.md`.**
-Anything else added to the repository root that should not reach a user's server has to be added
-there too; the `mv` below it sweeps up every remaining root `*.md` regardless.
+**Every `rm` names a dev-only file or directory, and anything else added to the repository root
+that should not reach a user's server has to be added to one of them.** The `mv` after them sweeps
+up every remaining root `*.md` regardless, and the release builder copies `vendor/` along with
+everything else — a build run from a checkout with the dev dependencies installed carries all of
+PHPUnit into the zip unless `rm` removes it.
 
 So verify the artifact, never the exit code:
 
 ```bash
 unzip -Z1 _releases/<file>.zip | grep -v '^upload/'          # zip root: README, CHANGELOG, LICENSE
-unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing'   # want no output
+unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|composer\.'   # want no output
 unzip -Z1 _releases/<file>.zip | grep -E '(^|/)\.[^/]*'      # dotfiles; want no output
 ```
 
@@ -199,9 +227,9 @@ one does not get you the others:
 
 | kept out of | by | covers |
 |---|---|---|
-| the git repository | `.gitignore` | `_data`, `_releases/`, `CLAUDE.local.md` |
-| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `TESTING.md`, `.gitattributes`, `.gitignore` |
-| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `TESTING.md` |
+| the git repository | `.gitignore` | `_data`, `_releases/`, `vendor/`, both PHPUnit caches, `CLAUDE.local.md` |
+| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, Composer's files, the dotfiles |
+| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, Composer's files, `vendor/`, both PHPUnit caches |
 
 The release builder walks the filesystem and knows nothing about git, so gitignoring a file does
 **not** keep it out of the zip. A new dev-only file needs adding to all three.
