@@ -33,5 +33,9 @@
 /CLAUDE.md        export-ignore
 /CLAUDE.local.md  export-ignore
 /TESTING.md       export-ignore
+/tests            export-ignore
+/phpunit.xml      export-ignore
+/composer.json    export-ignore
+/composer.lock    export-ignore
 /.gitattributes   export-ignore
 /.gitignore       export-ignore
