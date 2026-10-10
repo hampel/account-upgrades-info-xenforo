@@ -16,10 +16,12 @@ installation the suite is not set up on, such as a second XenForo version.
 | options | four, all `string`, in one option group |
 | phrases | ten — four option titles, four explains, the group title and its description |
 | `Setup.php` | no install, upgrade or uninstall steps; `postUpgrade()` only |
+| code event listener | one, answering `hampel_admin_api_redaction` with an empty secrets list |
 
-No class extensions, no code event listeners, no templates of its own, no routes, no permissions,
-no entities, no schema, no JavaScript and no runtime Composer dependencies — `composer.json` holds
-the test suite's dev dependencies only.
+One code event listener, which declares to a monitoring add-on that this add-on has no secrets;
+it is never fired unless that add-on is installed. No class extensions, no templates of its own,
+no routes, no permissions, no entities, no schema, no JavaScript and no runtime Composer
+dependencies — `composer.json` holds the test suite's dev dependencies only.
 
 Both modifications are `str_replace` at execution order 10, and both end their replacement with
 `$0`, so each block is **prepended** to the text it matches:

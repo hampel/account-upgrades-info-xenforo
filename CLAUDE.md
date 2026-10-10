@@ -14,9 +14,10 @@ This file covers only what is specific to this add-on.
 
 ## What this add-on is
 
-**Four admin options and two template modifications. There is no runtime PHP at all.** The whole
-feature is rendered by XenForo's template modification system from option values; nothing in this
-repository executes when a page is served.
+**Four admin options and two template modifications. Nothing in this repository executes when a
+page is served.** The whole feature is rendered by XenForo's template modification system from
+option values. The only PHP that ever runs is `Setup.php` during an install or upgrade, and a
+one-line listener fired by another add-on if that add-on is installed.
 
 The entire surface:
 
@@ -28,9 +29,35 @@ The entire surface:
 - `_output/phrases/` — the option titles, explains, and the group title and description.
 - `Setup.php` — no install, upgrade or uninstall steps; `postUpgrade()` only calls
   `enqueuePostUpgradeCleanUp()`, guarded to XF 2.3+.
+- `Listener.php` and `_output/code_event_listeners/` — one static method answering
+  `hampel_admin_api_redaction`, which declares that this add-on has no secrets. See *Declaring
+  no secrets* below.
 
-No classes, entities, repositories, routes, permissions, JS or LESS. Adding any of those means
-creating `_output/<type>/` with `xf-make:*` and importing.
+No class extensions, entities, repositories, routes, permissions, JS or LESS. Adding any of those
+means creating `_output/<type>/` with `xf-make:*`, which writes the database record, the
+`_output/` file and its metadata entry together — so nothing follows it, neither an import nor an
+export.
+
+## Declaring no secrets
+
+`Listener::adminApiRedaction()` answers the `hampel_admin_api_redaction` code event with
+`$declarations['Hampel/AccountUpgradesInfo'] = []`. All four options hold display text that
+administrators type and members read, and the add-on reads no `config.php` key, so the empty list
+is the whole declaration.
+
+**The empty list is not a no-op.** An add-on that has not declared has each of its *text* options
+reported only as set or not, so without this the add-on tells a monitoring consumer nothing about
+how a forum is configured. Declaring moves those four from "set" to shown.
+
+**It creates no dependency, and must not.** A code event that no installed add-on defines is never
+fired, so on a forum without the add-on that defines this one the listener costs nothing. Nothing
+goes in `addon.json`'s `require`, and the method stays an array of strings with nothing from
+another add-on's namespace in it.
+
+`tests/Feature/SecretsDeclarationTest.php` checks the declaration against `_output/options/`
+rather than against itself, because it otherwise goes stale silently when an option is added or
+renamed. The method carries no `declare(strict_types=1)` and no `void` return type: the add-on's
+floor is XenForo 2.2, which enforces PHP 7.0, and `void` needs 7.1.
 
 ## The two template modifications are the whole implementation
 
