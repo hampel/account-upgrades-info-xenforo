@@ -99,11 +99,24 @@ composer install            # first time; vendor/ is gitignored
 vendor/bin/phpunit
 ```
 
-It covers both modifications applying, the option combinations against an empty upgrade list, and
-`postUpgrade()`'s queueing of `FileCleanUp` — each test proved by breaking the behaviour it names
-and watching it fail. **It reads the forum, not the working copy**: after editing `_output/`, run
-the scoped import first, or the suite tests the previous version. Run it after every XenForo
-upgrade as well as after a change here, since that is when a `find` string stops matching.
+It covers both modifications applying, the option combinations against an empty upgrade list,
+every phrase resolving, the secrets declaration matching the options, and `postUpgrade()`'s
+queueing of `FileCleanUp` — each test proved by breaking the behaviour it names and watching it
+fail.
+
+**It reads the forum, not the working copy**: after editing `_output/`, run the scoped import
+first, or the suite tests the previous version. Run it after every XenForo upgrade as well as
+after a change here, since that is when a `find` string stops matching.
+
+**Do the phrases resolve, or show their raw key?** `tests/Feature/PhrasesTest.php` renders each of
+the ten phrases the add-on ships and fails on any that comes back as its own title, which is what
+XenForo renders for a phrase it cannot find. All ten are option labels, option explains and the
+group's title and description, so they appear **in the control panel only** — neither template
+modification calls `phrase()`, and the public blocks render option values rather than phrases.
+
+Phrases are the sharpest case of the caveat above, because a render resolves them from the
+database: editing a phrase file proves nothing until the import has run, so a failure here is more
+often a skipped import than a wrong phrase.
 
 The rest of this section is the same ground by hand, run from the installation root unless stated
 otherwise.
@@ -182,10 +195,6 @@ containing a space and carries the header lines through.
 modification applied and compiled; none of them renders HTML. Visit the route `account/upgrades`
 as a logged-in member and confirm the "before" block sits above the available-upgrades list and
 the "after" block below it.
-
-**Whether the phrases resolved.** A missing phrase renders as its raw key, which is visible on the
-page and invisible to every check above. Look at the options page in the control panel as well as
-the front end.
 
 **The case with upgrades actually available.** Everything above is exercised against an empty
 upgrade list, because that is what an in-process render can build without creating forum data. A

@@ -179,18 +179,23 @@ optional — omitting it exports every add-on in the install, not just this one.
 
 ## Tests read the forum, not the working copy
 
-The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.4`, and every test reads the
-installed add-on out of the forum's database — the template modification log, the compiled
-`account_upgrades` template, the option values. **An edit to `_output/` is invisible to it until
-`xf-dev:import` has run.** A red run after editing a modification usually means the import was
-skipped, not that the change is wrong.
+The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.4`. Most of it reads the
+installed add-on out of the forum — the template modification log, the compiled
+`account_upgrades` template, the option values, the phrase table. **An edit to `_output/` is
+invisible to those until `xf-dev:import` has run**, so a red run after editing a modification or a
+phrase usually means the import was skipped rather than that the change is wrong.
 
-Three things it covers, each proved by breaking the behaviour and watching the named test fail:
+Five things it covers, each proved by breaking the behaviour and watching the named test fail:
 
 - **both modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
   for a `find` that matched nothing;
 - **the option combinations** against an empty upgrade list, including the suppressed "no
   purchasable upgrades" message and a title with no body rendering nothing;
+- **every phrase resolves** rather than rendering as its own title, which is what XenForo shows
+  for one it cannot find. All ten are control-panel labels: no modification calls `phrase()`;
+- **the secrets declaration** names only this add-on and leaves no credential-shaped option
+  undecided — the one part of the suite that reads `_output/` rather than the forum, because the
+  declaration is what has to be checked against the files;
 - **`postUpgrade()`** queueing `FileCleanUp` on 2.3, and not queueing it when `\XF::$versionId` is
   below 2.3. On a 2.3 install that second test proves the guard is present, not that 2.2 would
   load the file.
