@@ -99,10 +99,10 @@ composer install            # first time; vendor/ is gitignored
 vendor/bin/phpunit
 ```
 
-It covers both modifications applying, the option combinations against an empty upgrade list,
-every phrase resolving, the secrets declaration matching the options, and `postUpgrade()`'s
-queueing of `FileCleanUp` — each test proved by breaking the behaviour it names and watching it
-fail.
+It covers both modifications applying, the option combinations against an empty upgrade list and
+the block ordering against a list with something in it, every phrase resolving, the secrets
+declaration matching the options, and `postUpgrade()`'s queueing of `FileCleanUp` — each test
+proved by breaking the behaviour it names and watching it fail.
 
 **It reads the forum, not the working copy**: after editing `_output/`, run the scoped import
 first, or the suite tests the previous version. Run it after every XenForo upgrade as well as
@@ -117,6 +117,19 @@ modification calls `phrase()`, and the public blocks render option values rather
 Phrases are the sharpest case of the caveat above, because a render resolves them from the
 database: editing a phrase file proves nothing until the import has run, so a failure here is more
 often a skipped import than a wrong phrase.
+
+**Do the blocks sit above and below the available-upgrades list?**
+`test_the_blocks_sit_above_and_below_the_available_upgrades_list` renders the page with one
+upgrade available and asserts that the "before" body, the list's own header, the upgrade and the
+"after" body appear in that order. It is the one claim the documentation makes that an empty list
+cannot show.
+
+**The upgrade is an unsaved entity, not a seeded row.** The template needs a title, a cost, a
+description and one payment profile id to build its purchase form, and none of those requires the
+upgrade to exist — so the test adds no forum data, leaves nothing behind, and reads the same on a
+forum that sells upgrades and one that has never defined any. Two mutations proved it: swapping
+which option feeds which block fails it, naming the string that is out of place, and passing an
+empty list fails it as well, so it cannot pass vacuously on a forum with nothing available.
 
 The rest of this section is the same ground by hand, run from the installation root unless stated
 otherwise.
@@ -167,7 +180,8 @@ git status --short          # want no output
 ```
 
 **Do the option combinations render as intended?** `tests/Feature/AccountUpgradesPageTest.php`
-renders `account_upgrades` against an empty upgrade list for each combination worth pinning. A
+renders `account_upgrades` against an empty upgrade list for each combination worth pinning, and
+once against a list with an upgrade in it for the ordering above. A
 render outside the test framework needs the `xf` template parameter installed by hand —
 `$app->templater()->addDefaultParam('xf', $app->getGlobalTemplateData(null))` under
 `XF\Pub\App` — or `$xf.options` resolves to null, every `contentcheck` sees empty content, and the
@@ -191,15 +205,17 @@ containing a space and carries the header lines through.
 
 ## Needs a human
 
-**Whether the blocks actually appear on the page, and read correctly.** The checks above prove the
-modification applied and compiled; none of them renders HTML. Visit the route `account/upgrades`
-as a logged-in member and confirm the "before" block sits above the available-upgrades list and
-the "after" block below it.
+**Whether the blocks read correctly to a member.** The suite renders the template and asserts
+what is in the HTML, which is a different question: it cannot say whether the text makes sense
+where it lands, whether a bordered panel sits comfortably against the list, or whether a body
+with markup in it looks the way the administrator who typed it expected. Visit the route
+`account/upgrades` as a logged-in member and read the page.
 
-**The case with upgrades actually available.** Everything above is exercised against an empty
-upgrade list, because that is what an in-process render can build without creating forum data. A
-forum that has purchasable upgrades should be checked with a real one defined, confirming the
-"before" block sits above the list and the "after" block below it.
+**The case with upgrades actually available, through the controller.** The ordering claim is
+automated now — see *Automated* — but against an in-process render whose upgrade is an unsaved
+entity. What that cannot reach is the real path: XenForo's own query for what this member can
+purchase, a payment profile that exists, and the purchase form as the payment provider renders it.
+A forum that sells upgrades is worth looking at once with a real one defined.
 
 **The upgrade path from a published release** — on a throwaway installation, for the reason in
 *Fragile points*, never over a working copy. Install the previous release's zip, then upgrade to

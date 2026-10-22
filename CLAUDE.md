@@ -214,12 +214,15 @@ installed add-on out of the forum — the template modification log, the compile
 invisible to those until `xf-dev:import` has run**, so a red run after editing a modification or a
 phrase usually means the import was skipped rather than that the change is wrong.
 
-Five things it covers, each proved by breaking the behaviour and watching the named test fail:
+Six things it covers, each proved by breaking the behaviour and watching the named test fail:
 
 - **both modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
   for a `find` that matched nothing;
 - **the option combinations** against an empty upgrade list, including the suppressed "no
   purchasable upgrades" message and a title with no body rendering nothing;
+- **the block ordering** against a list with something in it — the "before" block above the
+  available-upgrades list and the "after" block below it, which an empty list cannot show. The
+  upgrade is an unsaved entity, so the test needs no forum data and no payment profile;
 - **every phrase resolves** rather than rendering as its own title, which is what XenForo shows
   for one it cannot find. All ten are control-panel labels: no modification calls `phrase()`;
 - **the secrets declaration** names only this add-on and leaves no credential-shaped option

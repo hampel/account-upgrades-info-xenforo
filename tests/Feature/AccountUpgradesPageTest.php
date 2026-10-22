@@ -82,7 +82,45 @@ class AccountUpgradesPageTest extends TestCase
 		$this->assertSee($html, '<strong>Before body</strong>', false);
 	}
 
-	private function renderPage(array $options)
+	/**
+	 * The one claim the documentation makes that an empty list cannot show: the "before" block
+	 * sits above the available-upgrades list and the "after" block below it. Every other test
+	 * here renders with nothing available, which is the case the add-on most has to get right
+	 * but says nothing about the ordering.
+	 */
+	public function test_the_blocks_sit_above_and_below_the_available_upgrades_list()
+	{
+		$html = $this->renderPage(
+			['BodyBefore' => 'Before body', 'BodyAfter' => 'After body'],
+			[1 => $this->anUpgradeToPurchase('Supporter')]
+		);
+
+		$this->assertSeeInOrder($html, ['Before body', 'Available upgrades', 'Supporter', 'After body']);
+	}
+
+	/**
+	 * An unsaved entity rather than a seeded row. The template needs a title, a cost, a
+	 * description and one payment profile id to render a purchase button, and none of those
+	 * needs the upgrade to exist - so this test adds no forum data and runs the same on a
+	 * forum that sells upgrades and one that does not.
+	 */
+	private function anUpgradeToPurchase($title)
+	{
+		$upgrade = $this->app()->em()->create('XF:UserUpgrade');
+		$upgrade->setTrusted('user_upgrade_id', 1);
+		$upgrade->title = $title;
+		$upgrade->description = '';
+		$upgrade->cost_amount = 10;
+		$upgrade->cost_currency = 'usd';
+		$upgrade->length_amount = 1;
+		$upgrade->length_unit = 'month';
+		$upgrade->can_purchase = true;
+		$upgrade->payment_profile_ids = [1];
+
+		return $upgrade;
+	}
+
+	private function renderPage(array $options, array $available = [])
 	{
 		$defaults = ['TitleBefore' => '', 'BodyBefore' => '', 'TitleAfter' => '', 'BodyAfter' => ''];
 
@@ -92,7 +130,7 @@ class AccountUpgradesPageTest extends TestCase
 		}
 
 		$html = $this->renderTemplate('public:account_upgrades', [
-			'available' => $this->app()->em()->getBasicCollection([]),
+			'available' => $this->app()->em()->getBasicCollection($available),
 			'purchased' => $this->app()->em()->getBasicCollection([]),
 			'canPurchase' => true,
 		]);
