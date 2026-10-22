@@ -177,6 +177,29 @@ php ../../../../cmd.php xf-addon:build-release Hampel/AccountUpgradesInfo  # rel
 optional — omitting it exports every add-on in the install, not just this one.
 `xf-addon:build-release` calls the scoped `xf-addon:export` internally, which is safe.
 
+## No `config` or `validate` commands, because core already reports the only failure
+
+An add-on can declare a pair of self-check CLI commands — one that prints what the forum is
+configured to do, and one that proves it can. This add-on has neither, and the reason is written
+down because the obvious argument points the other way: it does depend on something it does not
+own — two literal strings in a template belonging to XenForo — so it looks like a candidate for a
+`validate` command that checks they still match.
+
+**XenForo already reports that, on screen, without being asked.**
+`XF\Entity\TemplateModification::getLogSummary()` counts a log row as `not_found` on exactly
+`status === 'ok' && apply_count === 0`, which is the condition such a command would have tested,
+and the administrator's template-modification list renders that summary. A command here would
+restate it.
+
+The three questions that decide whether an add-on needs the pair are all "no" for this one. No
+setting is opaque — the four options hold display text, so the value *is* the output. Nothing runs
+unattended. And `config` would report nothing the control panel does not already assemble on one
+options page. Against that sits a real cost: every command an add-on declares appears in
+`cmd.php list` on every forum that installs it, for good.
+
+Decided 2026-10-10. An option that holds a credential, anything that runs on a schedule, or a
+dependency on a service outside the forum would each reopen it.
+
 ## Tests read the forum, not the working copy
 
 The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.4`. Most of it reads the
