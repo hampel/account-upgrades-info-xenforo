@@ -97,7 +97,18 @@ class AccountUpgradesPageTest extends TestCase
 			'canPurchase' => true,
 		]);
 
-		$this->assertNoTemplateErrors();
+		// Scoped to the template this add-on modifies, not to every template the render
+		// touched. account_upgrades wraps the core account_wrapper, and a template modification
+		// compiles into the install's shared template cache whatever $addonsToLoad says - so a
+		// sibling add-on modifying account_wrapper to read something its own class extension
+		// declares raises an error on every render here, which this suite is not answerable for.
+		//
+		// A name filter rather than a closure, which the framework suggests for an add-on that
+		// owns no templates: this add-on is the only one modifying account_upgrades, so the name
+		// does identify its markup. If that stops being true the filter will start reporting a
+		// sibling's errors against this suite - which is the right way round, since an error
+		// raised rendering this template is worth seeing either way.
+		$this->assertNoTemplateErrors('account_upgrades');
 
 		return $html;
 	}
