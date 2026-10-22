@@ -208,29 +208,52 @@ dependency on a service outside the forum would each reopen it.
 
 ## Tests read the forum, not the working copy
 
-The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.4`. Most of it reads the
+The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.32` — a floor set by what
+the suite calls rather than by what was current: `assertNoTemplateErrors()`'s filter arrived in
+5.20, `renderTemplateWithoutModification()` in 5.24 and
+`assertAddOnTemplateModificationsApply()` in 5.29. Most of it reads the
 installed add-on out of the forum — the template modification log, the compiled
 `account_upgrades` template, the option values, the phrase table. **An edit to `_output/` is
 invisible to those until `xf-dev:import` has run**, so a red run after editing a modification or a
 phrase usually means the import was skipped rather than that the change is wrong.
 
-Six things it covers, each proved by breaking the behaviour and watching the named test fail:
+**Three tests read the shipped artifacts instead, deliberately**, because that caveat is itself a
+failure nothing else catches: the two modification checks below that glob
+`_output/template_modifications/`, and the secrets declaration. A modification committed without
+an import, or a `find` string edited into one that cannot match, passes every forum-reading test
+in the suite against the version the forum still holds.
 
-- **both modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
-  for a `find` that matched nothing;
-- **the option combinations** against an empty upgrade list, including the suppressed "no
-  purchasable upgrades" message and a title with no body rendering nothing;
+What it covers, each proved by breaking the behaviour and watching the named test fail:
+
+- **the modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
+  for a `find` that matched nothing — per key, and once more for whatever the add-on registers, so
+  a modification added later is covered without being named;
+- **each `find` string matching the target template exactly once**, read from the shipped
+  artifacts rather than the forum's rows, so an edit that would stop matching or match twice fails
+  before the import that would make it real. This is the add-on's sharpest edge;
+- **the forum holding every modification the add-on ships** — the other half of the caveat above,
+  and the only one of these a commit can break on its own;
+- **the option combinations** against an empty upgrade list, **each run against both blocks**:
+  the suppressed "no purchasable upgrades" message, a title with no body rendering nothing, a body
+  with no title rendering a headerless block, the body output raw and the title escaped. The two
+  modifications are separate artifacts carrying the same markup, so a test naming only one side
+  would pass through a one-sided edit;
 - **the block ordering** against a list with something in it — the "before" block above the
-  available-upgrades list and the "after" block below it, which an empty list cannot show. The
-  upgrade is an unsaved entity, so the test needs no forum data and no payment profile;
+  available-upgrades list, the "after" block below it and above the purchased list. Both upgrades
+  are unsaved entities, so no forum data and no payment profile is needed;
+- **the control**, rendering each modification out through `renderTemplateWithoutModification()`:
+  its own block goes, the other add-on block stays, and XenForo's own message comes back. Nothing
+  is written and no other suite on the install is disturbed;
 - **every phrase resolves** rather than rendering as its own title, which is what XenForo shows
   for one it cannot find. All ten are control-panel labels: no modification calls `phrase()`;
 - **the secrets declaration** names only this add-on and leaves no credential-shaped option
-  undecided — the one part of the suite that reads `_output/` rather than the forum, because the
-  declaration is what has to be checked against the files;
+  undecided — checked against `_output/options/` rather than against itself, because the
+  declaration is what has to agree with the files;
 - **`postUpgrade()`** queueing `FileCleanUp` on 2.3, and not queueing it when `\XF::$versionId` is
   below 2.3. On a 2.3 install that second test proves the guard is present, not that 2.2 would
-  load the file.
+  load the file;
+- **`Setup` declaring no version-gated step**, which is the assumption `TESTING.md` skips the
+  upgrade test on. Add one and that skip has to be revisited rather than inherited.
 
 `$addonsToLoad` names only this add-on. Other add-ons on a forum may vendor their own PHPUnit, and
 without the isolation its classes can resolve out of someone else's `vendor/`. It does not remove

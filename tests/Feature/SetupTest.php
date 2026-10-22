@@ -50,6 +50,34 @@ class SetupTest extends TestCase
 		$this->assertNoJobsQueued();
 	}
 
+	/**
+	 * `TESTING.md` skips the upgrade test on the grounds that this class declares no version
+	 * gated step at all, so an install that works and an upgrade that fails cannot come apart.
+	 * That is an assumption about the file rather than about XenForo, and it stops being true
+	 * the moment someone adds a step - at which point the skip has to be revisited rather than
+	 * inherited.
+	 */
+	public function test_it_declares_no_version_gated_steps()
+	{
+		$steps = [];
+
+		foreach (get_class_methods(Setup::class) AS $method)
+		{
+			if (preg_match('/Step\d+$/', $method))
+			{
+				$steps[] = $method;
+			}
+		}
+
+		$this->assertSame([], $steps, 'the upgrade test can no longer be skipped - see TESTING.md');
+	}
+
+	/** Guards the test above: the pattern proves nothing if it is reading the wrong class. */
+	public function test_it_reads_this_add_on_s_setup_class()
+	{
+		$this->assertContains('postUpgrade', get_class_methods(Setup::class));
+	}
+
 	private function addOnSetup()
 	{
 		$addOn = $this->app()->addOnManager()->getById('Hampel/AccountUpgradesInfo');

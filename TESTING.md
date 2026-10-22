@@ -99,14 +99,24 @@ composer install            # first time; vendor/ is gitignored
 vendor/bin/phpunit
 ```
 
-It covers both modifications applying, the option combinations against an empty upgrade list and
-the block ordering against a list with something in it, every phrase resolving, the secrets
-declaration matching the options, and `postUpgrade()`'s queueing of `FileCleanUp` — each test
-proved by breaking the behaviour it names and watching it fail.
+It covers the modifications applying and each `find` string matching exactly once, the option
+combinations against an empty upgrade list — every one of them against both blocks — the ordering
+against a list with something available and one with something purchased, a control render with
+each modification left out, every phrase resolving, the secrets declaration matching the options,
+`postUpgrade()`'s queueing of `FileCleanUp`, and `Setup` declaring no version-gated step. Each
+test was proved by breaking the behaviour it names and watching it fail.
 
-**It reads the forum, not the working copy**: after editing `_output/`, run the scoped import
-first, or the suite tests the previous version. Run it after every XenForo upgrade as well as
-after a change here, since that is when a `find` string stops matching.
+**Most of it reads the forum, not the working copy**: after editing `_output/`, run the scoped
+import first, or those tests check the previous version. Run the suite after every XenForo upgrade
+as well as after a change here, since that is when a `find` string stops matching.
+
+**Three tests read the shipped artifacts instead, deliberately**, because that caveat is itself a
+failure nothing else catches. `test_each_find_string_matches_the_target_template_exactly_once`
+counts each artifact's `find` in the master template — `0` means it can no longer apply, above `1`
+means it would apply twice — and fails on an edit before the import that would make it real.
+`test_the_forum_holds_every_modification_the_add_on_ships` compares the artifacts against the
+forum's rows, so a modification committed without an import fails rather than passing against the
+previous version. The secrets declaration is the third.
 
 **Do the phrases resolve, or show their raw key?** `tests/Feature/PhrasesTest.php` renders each of
 the ten phrases the add-on ships and fails on any that comes back as its own title, which is what
@@ -118,25 +128,44 @@ Phrases are the sharpest case of the caveat above, because a render resolves the
 database: editing a phrase file proves nothing until the import has run, so a failure here is more
 often a skipped import than a wrong phrase.
 
-**Do the blocks sit above and below the available-upgrades list?**
-`test_the_blocks_sit_above_and_below_the_available_upgrades_list` renders the page with one
-upgrade available and asserts that the "before" body, the list's own header, the upgrade and the
-"after" body appear in that order. It is the one claim the documentation makes that an empty list
-cannot show.
+**Do the blocks sit where the documentation says?** Two tests, because the two claims need
+different pages. One renders with an upgrade available and asserts the "before" body, the list's
+own header, the upgrade and the "after" body in that order. The other renders with an upgrade the
+visitor holds and asserts the "after" body lands **above** the purchased list — which is where the
+"below" modification has to anchor, so it is the claim most easily got backwards.
 
-**The upgrade is an unsaved entity, not a seeded row.** The template needs a title, a cost, a
-description and one payment profile id to build its purchase form, and none of those requires the
-upgrade to exist — so the test adds no forum data, leaves nothing behind, and reads the same on a
-forum that sells upgrades and one that has never defined any. Two mutations proved it: swapping
-which option feeds which block fails it, naming the string that is out of place, and passing an
-empty list fails it as well, so it cannot pass vacuously on a forum with nothing available.
+**Both upgrades are unsaved entities, not seeded rows.** The available list needs a title, a cost,
+a description and one payment profile id to build its purchase form; the purchased list needs the
+`Active` relation hydrated for the expiry date, and `recurring` left false so the
+payment-provider block below it stays shut. None of that requires a row — so these tests add no
+forum data, leave nothing behind, and read the same on a forum that sells upgrades and one that
+never has. Mutations proved both: swapping which option feeds which block fails each of them
+naming the string that is out of place, and the available-list test fails on an empty list too, so
+it cannot pass vacuously where nothing is available.
+
+**Is the block the modification's doing?** `test_without_its_modification_a_block_is_absent`
+renders through `renderTemplateWithoutModification()` with both bodies set, and asserts the
+block whose modification was left out is gone while the other one is still there — without that
+second half the test would pass equally if the render had dropped the add-on altogether, or
+returned nothing. `test_without_the_add_on_xenforo_shows_its_own_no_upgrades_message` is the same
+mechanism pointed at the suppression: leave the modification out and the core message is back on a
+page whose options are set, which is the only way to show the suppression is this add-on's doing
+rather than something about the install. **Nothing is written** — the remaining modifications are
+applied to the template's text in memory, so the forum's compiled templates and modification rows
+are untouched and a suite running beside this one is unaffected.
+
+**Does the title escape and the body not?** The deliberate asymmetry: the body promises HTML in its
+explain phrase and is output `|raw`, the title is a heading inside an `h2` and is escaped. Both are
+asserted for both blocks. The proof that the assertion discriminates is the add-on's own
+behaviour — pointed at the body, the same pair of assertions fails.
 
 The rest of this section is the same ground by hand, run from the installation root unless stated
 otherwise.
 
-**Do the modifications still match the target template, exactly once each?** This is the check that
-catches the silent failure above. Run it against every XenForo version the add-on claims to
-support, not only the newest.
+**Do the modifications still match the target template, exactly once each?** The suite does this
+for the install it runs against, so what is left by hand is **every other XenForo version the
+add-on claims to support** — which is the half that matters after a XenForo release, and the half
+PHPUnit cannot reach from one install.
 
 ```bash
 php -r '
@@ -230,9 +259,11 @@ the tell is `All data imported.` in the output where `Importing add-on data` bel
 
 **When this test can be skipped, and why it can be here.** `Setup.php` declares no version-gated
 `upgrade<versionId>Step<n>()` methods at all, so the install-works-but-upgrade-fails failure
-cannot occur — that is structural rather than untested. And nothing has ever been removed from
-this add-on's shipped file set, so `FileCleanUp` has nothing to act on either. Both statements
-need rechecking the moment a gated step or a deleted file appears.
+cannot occur — that is structural rather than untested, and
+`test_it_declares_no_version_gated_steps` fails the moment it stops being true. And nothing has
+ever been removed from this add-on's shipped file set, so `FileCleanUp` has nothing to act on
+either. The second statement still needs rechecking the moment a deleted file appears; the first
+now rechecks itself.
 
 **The support URLs in `addon.json`.** The three xenforo.com links return 403 to `curl`, which is
 bot protection rather than a dead link, so they cannot be checked from a script. Open them in a
