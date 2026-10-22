@@ -130,6 +130,12 @@ SELECT modification_key, status, SUM(apply_count) AS applied FROM xf_template_mo
 added in 2.3 — so removing the guard makes every upgrade on an older install a fatal. Do not
 "tidy" it away.
 
+**Nor does the job it queues.** `XF\Job\FileCleanUp` arrived with the method: `src/XF/Job/` holds
+no `FileCleanUp.php` in 2.2.19. So there is no older route to the same behaviour to be clever
+about, and the guard is the whole answer rather than one of several. `SetupTest.php` imports that
+class to assert the queueing, which is safe because `::class` on an imported name is resolved by
+the compiler to a string and autoloads nothing.
+
 ## The floor is XenForo 2.2.0, and it is set by what can be tested
 
 `addon.json` declares `"XF": ["2020070", "XenForo 2.2.0+"]` and no `php` key — the add-on uses
