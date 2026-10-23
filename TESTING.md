@@ -255,6 +255,26 @@ entity. What that cannot reach is the real path: XenForo's own query for what th
 purchase, a payment profile that exists, and the purchase form as the payment provider renders it.
 A forum that sells upgrades is worth looking at once with a real one defined.
 
+Two things decide whether that page shows an available list at all, and both are easy to get
+wrong when setting one up:
+
+- **the upgrade needs `can_purchase` on.** `UserUpgradeRepository::getFilteredUserUpgradesForList()`
+  drops every upgrade whose `canPurchase()` is false, so an upgrade defined with purchasing off
+  appears nowhere — the page falls back to XenForo's own message, which this add-on then
+  suppresses, and the "before" block renders against nothing;
+- **the payment profile may be switched off.** An inactive profile still renders the purchase
+  button, because the template reads `$upgrade.payment_profile_ids` and only consults the
+  controller's `$profiles` when an upgrade names more than one. So one profile, inactive, is enough
+  to see the list — and a purchase through it is refused by
+  `XF\Purchasable\UserUpgrade::getPurchaseFromRequest()` before any purchase request is written.
+  An upgrade naming two inactive profiles instead renders an empty `(choose payment method)`
+  select, which is a broken-looking page rather than the one to judge the blocks against.
+
+**Check it as a member, not as a guest.** That same repository method skips its filtering loop
+entirely when `$visitor->user_id` is 0, so a guest — or a CLI script with no visitor set — sees
+every upgrade as available, `can_purchase` off included. A check made that way reports success
+whatever the data says.
+
 **The upgrade path from a published release** — on a throwaway installation, for the reason in
 *Fragile points*, never over a working copy. Install the previous release's zip, then upgrade to
 the new one.
