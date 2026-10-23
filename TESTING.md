@@ -64,6 +64,14 @@ nothing to choose. This is inherent to where the modifications can anchor — th
 insertion point outside that contentcheck — and it is why the shipped default for the "before"
 body does not refer to a list below it.
 
+**That member reaches the template at all only because of how XenForo writes one test.**
+`actionUpgrades()` answers with XenForo's own message, not the template, when
+`!$available && !$purchased`. The available list arrives as an entity collection, which is never
+falsy however empty it is, so the branch does not fire on 2.2 or 2.3 and the template renders. If
+XenForo ever counts the list instead, the blocks vanish for exactly the member the "before" text is
+written for, with nothing logged. `AccountUpgradesRouteTest` dispatches the route for that member
+and fails if it happens.
+
 **The body is output `|raw`.** The option explain phrases promise HTML, so the values are trusted
 administrator input by design. Escaping it would be a behaviour change and needs the phrases and
 the resource description changed to match.
@@ -103,9 +111,23 @@ vendor/bin/phpstan analyse
 It covers the modifications applying and each `find` string matching exactly once, the option
 combinations against an empty upgrade list — every one of them against both blocks — the ordering
 against a list with something available and one with something purchased, a control render with
-each modification left out, every phrase resolving, the secrets declaration matching the options,
-`postUpgrade()`'s queueing of `FileCleanUp`, and `Setup` declaring no version-gated step. Each
-test was proved by breaking the behaviour it names and watching it fail.
+each modification left out, the route itself as a member reaches it, every phrase resolving, the
+secrets declaration matching the options and the forum calling it, `postUpgrade()`'s queueing of
+`FileCleanUp`, and `Setup` declaring no version-gated step. Each test was proved by breaking the
+behaviour it names and watching it fail.
+
+**Does a member reach the blocks through XenForo's own route?** The page tests render the template
+with lists they build; `tests/Feature/AccountUpgradesRouteTest.php` dispatches `account/upgrades`
+as a member and renders the whole page. Once with nothing on offer — the case that depends on the
+controller branch described under *Fragile points* — and once with a real upgrade and a real,
+inactive payment profile, so XenForo's own query decides what is available and the purchase link
+is the one the template builds from a saved row. Both rows are created inside a transaction and
+rolled back.
+
+**Does the forum call the listener?** The rest of the secrets tests call the method directly.
+`test_the_forum_calls_the_listener_when_the_event_fires` fires `hampel_admin_api_redaction` through
+XenForo, so it fails when the listener row is missing, inactive or names the wrong callback — proved
+by deactivating the row for one run.
 
 **Most of it reads the forum, not the working copy**: after editing `_output/`, run the scoped
 import first, or those tests check the previous version. Run the suite after every XenForo upgrade
@@ -249,11 +271,10 @@ where it lands, whether a bordered panel sits comfortably against the list, or w
 with markup in it looks the way the administrator who typed it expected. Visit the route
 `account/upgrades` as a logged-in member and read the page.
 
-**The case with upgrades actually available, through the controller.** The ordering claim is
-automated now — see *Automated* — but against an in-process render whose upgrade is an unsaved
-entity. What that cannot reach is the real path: XenForo's own query for what this member can
-purchase, a payment profile that exists, and the purchase form as the payment provider renders it.
-A forum that sells upgrades is worth looking at once with a real one defined.
+**A forum's own upgrades and payment providers.** The route is automated now, with XenForo's own
+query and a saved upgrade and profile — see *Automated*. What a test cannot judge is a forum's real
+configuration: several upgrades, an active profile, and how the blocks sit against the purchase
+form a live payment provider renders. A forum that sells upgrades is worth looking at once.
 
 Two things decide whether that page shows an available list at all, and both are easy to get
 wrong when setting one up:
@@ -310,7 +331,7 @@ added.
 is the first release whose `_data/code_event_listeners.xml` is not empty — 1.0.2 shipped
 `<code_event_listeners/>` — so the upgrade has to import a listener row into a file every existing
 install already has. That is XenForo's own data import rather than anything of this add-on's, and
-the suite proves the listener answers correctly once installed, but no test here watches the
+the suite proves the forum it runs on holds the row and calls it, but no test here watches the
 import happen on a forum coming from the previous release.
 
 **The support URLs in `addon.json`.** The three xenforo.com links return 403 to `curl`, which is

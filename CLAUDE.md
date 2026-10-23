@@ -84,6 +84,13 @@ earlier anchor outside that contentcheck, so this is inherent rather than a choi
 the shipped default for the "before" body does not refer to a list below it.
 `tests/Feature/AccountUpgradesPageTest.php` pins it.
 
+**That member reaches the template only because a core test never fires.** `actionUpgrades()`
+returns XenForo's own message instead of the template when `!$available && !$purchased`, which
+would take both blocks with it. `$available` is an entity collection, an object, so the test is
+false however empty it is — on 2.2 and 2.3 alike. The add-on depends on that and cannot control
+it; `tests/Feature/AccountUpgradesRouteTest.php` dispatches the route for that member and is the
+test that fails if XenForo ever counts the list instead.
+
 **Each block is wrapped in `<xf:if contentcheck="true">` with the option inside `<xf:contentcheck>`,
 so an empty option hides the block rather than rendering an empty bordered panel.** The title is
 checked separately from the body, which is why a body with no title renders a headerless block

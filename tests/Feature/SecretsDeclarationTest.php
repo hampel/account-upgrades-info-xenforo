@@ -83,6 +83,20 @@ class SecretsDeclarationTest extends TestCase
         $this->assertSame([], $undecided, 'declare each as a secret, or add it to NOT_SECRETS');
     }
 
+    /**
+     * Every other test here calls the method directly, which proves the declaration and nothing
+     * about whether the forum ever calls it. This fires the event the way the add-on defining it
+     * does, so it fails when the listener row is missing, inactive or names the wrong callback -
+     * and that row arrives on an existing forum only through an import, not with the code.
+     */
+    public function test_the_forum_calls_the_listener_when_the_event_fires(): void
+    {
+        $declarations = [];
+        \XF::fire('hampel_admin_api_redaction', [&$declarations]);
+
+        $this->assertSame($this->declarations(), $declarations);
+    }
+
     /** Guards the test above: it asserts nothing useful if it never sees this add-on's options. */
     public function test_the_credential_check_reads_this_add_on_s_options(): void
     {
