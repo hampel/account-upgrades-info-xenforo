@@ -208,17 +208,18 @@ dependency on a service outside the forum would each reopen it.
 
 ## Tests read the forum, not the working copy
 
-The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.32` — a floor set by what
+The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.33` — a floor set by what
 the suite calls rather than by what was current: `assertNoTemplateErrors()`'s filter arrived in
-5.20, `renderTemplateWithoutModification()` in 5.24 and
-`assertAddOnTemplateModificationsApply()` in 5.29. Most of it reads the
+5.20, `renderTemplateWithoutModification()` in 5.24, and both
+`assertAddOnTemplateModificationsApplyTimes()` and
+`assertAddOnTemplateModificationFindsMatch()` in 5.33. Most of it reads the
 installed add-on out of the forum — the template modification log, the compiled
 `account_upgrades` template, the option values, the phrase table. **An edit to `_output/` is
 invisible to those until `xf-dev:import` has run**, so a red run after editing a modification or a
 phrase usually means the import was skipped rather than that the change is wrong.
 
 **Three tests read the shipped artifacts instead, deliberately**, because that caveat is itself a
-failure nothing else catches: the two modification checks below that glob
+failure nothing else catches: the two modification checks below that read
 `_output/template_modifications/`, and the secrets declaration. A modification committed without
 an import, or a `find` string edited into one that cannot match, passes every forum-reading test
 in the suite against the version the forum still holds.
@@ -227,10 +228,15 @@ What it covers, each proved by breaking the behaviour and watching the named tes
 
 - **the modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
   for a `find` that matched nothing — per key, and once more for whatever the add-on registers, so
-  a modification added later is covered without being named;
+  a modification added later is covered without being named. That second check asserts **exactly
+  once** rather than at least once, counted per log row: a `find` matching twice inserts the block
+  twice and reads as applied, while a sum over rows would count a forum's styles as matches;
 - **each `find` string matching the target template exactly once**, read from the shipped
   artifacts rather than the forum's rows, so an edit that would stop matching or match twice fails
-  before the import that would make it real. This is the add-on's sharpest edge;
+  before the import that would make it real. This is the add-on's sharpest edge. The framework
+  counts as XenForo's own repository does — `substr_count()` for a `str_replace`, `preg_match_all()`
+  for a regex — and refuses rather than passes where there is no artifact to read, which is why
+  this add-on does not count them itself;
 - **the forum holding every modification the add-on ships** — the other half of the caveat above,
   and the only one of these a commit can break on its own;
 - **the option combinations** against an empty upgrade list, **each run against both blocks**:

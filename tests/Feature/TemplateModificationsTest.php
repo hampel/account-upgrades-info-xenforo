@@ -24,11 +24,13 @@ class TemplateModificationsTest extends TestCase
 
 	/**
 	 * The two above name their modification, so neither covers one added later. This covers
-	 * whatever the add-on registers, which is the assertion that keeps working.
+	 * whatever the add-on registers, and it asserts exactly once rather than at least once: a
+	 * find that matches twice inserts the block twice and still reads as applied. The count is
+	 * checked per log row, so a forum carrying several styles is not read as several matches.
 	 */
-	public function test_every_modification_this_add_on_registers_applies()
+	public function test_every_modification_this_add_on_registers_applies_once()
 	{
-		$applied = $this->assertAddOnTemplateModificationsApply();
+		$applied = $this->assertAddOnTemplateModificationsApplyTimes(1);
 
 		$this->assertSame(
 			['hampelAccountUpgradesInfoAbove', 'hampelAccountUpgradesInfoBelow'],
@@ -38,9 +40,22 @@ class TemplateModificationsTest extends TestCase
 	}
 
 	/**
-	 * Everything above reads the forum, so an artifact committed without an import is invisible
-	 * to it: the forum still holds the previous version and every assertion passes. This is the
-	 * other half, and it is the one a commit can break on its own.
+	 * The check `TESTING.md` used to ask a human to run, and the add-on's sharpest edge: a find
+	 * string that matches nothing silently drops the block, and one that matches twice renders it
+	 * twice. This reads the shipped artifacts and the master template text rather than the forum's
+	 * rows, so it fails on an edit to `_output/` before the import that would make it real, and it
+	 * refuses rather than passes where there is no artifact to read.
+	 */
+	public function test_each_find_string_matches_the_target_template_exactly_once()
+	{
+		$this->assertAddOnTemplateModificationFindsMatch();
+	}
+
+	/**
+	 * Everything above reads the forum or the working copy, never the two against each other, so
+	 * an artifact committed without an import is invisible to all of them: the forum still holds
+	 * the previous version and every assertion passes. This is the other half, and it is the one
+	 * a commit can break on its own.
 	 */
 	public function test_the_forum_holds_every_modification_the_add_on_ships()
 	{
@@ -56,42 +71,7 @@ class TemplateModificationsTest extends TestCase
 		$this->assertSame($shipped, $installed, 'run xf-dev:import - the forum is out of date');
 	}
 
-	/**
-	 * The check `TESTING.md` asks a human to run, which is the add-on's sharpest edge: a find
-	 * string that matches nothing silently drops the block, and one that matches twice renders
-	 * it twice. Reading the shipped artifacts rather than the forum's rows means this fails on
-	 * an edit to `_output/` before the import that would make it real.
-	 */
-	public function test_each_find_string_matches_the_target_template_exactly_once()
-	{
-		$counts = [];
-
-		foreach ($this->shippedModifications() AS $key => $modification)
-		{
-			$template = $this->app()->db()->fetchOne(
-				'SELECT template FROM xf_template WHERE title = ? AND type = ? AND style_id = 0',
-				[$modification['template'], 'public']
-			);
-
-			$this->assertNotNull(
-				$template,
-				"{$key} modifies public:{$modification['template']}, which this forum does not have"
-			);
-
-			$counts[$key] = substr_count($template, $modification['find']);
-		}
-
-		$this->assertSame(
-			[
-				'hampelAccountUpgradesInfoAbove' => 1,
-				'hampelAccountUpgradesInfoBelow' => 1,
-			],
-			$counts,
-			'0 means the modification can no longer apply; above 1 means it applies more than once'
-		);
-	}
-
-	/** Guards the two tests above: both assert nothing if the glob finds no artifacts. */
+	/** Guards the test above: it asserts nothing if the glob finds no artifacts. */
 	public function test_it_reads_this_add_on_s_modification_artifacts()
 	{
 		$this->assertCount(2, $this->shippedModifications());
