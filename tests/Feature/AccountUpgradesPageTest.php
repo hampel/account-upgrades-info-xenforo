@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
+use XF\Mvc\Entity\Entity;
 
 /**
  * Renders account_upgrades for each option shape worth pinning, and for the two cases the
@@ -35,7 +36,7 @@ class AccountUpgradesPageTest extends TestCase
 		];
 	}
 
-	public function test_with_every_option_empty_the_page_is_left_to_xenforo()
+	public function test_with_every_option_empty_the_page_is_left_to_xenforo(): void
 	{
 		$html = $this->renderPage([]);
 
@@ -44,14 +45,14 @@ class AccountUpgradesPageTest extends TestCase
 	}
 
 	#[DataProvider('blocks')]
-	public function test_a_block_renders_its_title_then_its_body($which)
+	public function test_a_block_renders_its_title_then_its_body(string $which): void
 	{
 		$html = $this->renderPage(["Title{$which}" => 'A title', "Body{$which}" => 'A body']);
 
 		$this->assertSeeInOrder($html, ['block-header', 'A title', 'A body']);
 	}
 
-	public function test_the_before_block_renders_ahead_of_the_after_block()
+	public function test_the_before_block_renders_ahead_of_the_after_block(): void
 	{
 		$html = $this->renderPage(['BodyBefore' => 'Before body', 'BodyAfter' => 'After body']);
 
@@ -65,7 +66,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * change to the anchors cannot alter it unnoticed.
 	 */
 	#[DataProvider('blocks')]
-	public function test_a_body_suppresses_the_no_purchasable_upgrades_message($which)
+	public function test_a_body_suppresses_the_no_purchasable_upgrades_message(string $which): void
 	{
 		$html = $this->renderPage(["Body{$which}" => 'A body']);
 
@@ -78,7 +79,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * and leaves the core message in place.
 	 */
 	#[DataProvider('blocks')]
-	public function test_a_title_without_a_body_renders_nothing($which)
+	public function test_a_title_without_a_body_renders_nothing(string $which): void
 	{
 		$html = $this->renderPage(["Title{$which}" => 'A title']);
 
@@ -87,7 +88,7 @@ class AccountUpgradesPageTest extends TestCase
 	}
 
 	#[DataProvider('blocks')]
-	public function test_a_body_without_a_title_renders_a_block_with_no_header($which)
+	public function test_a_body_without_a_title_renders_a_block_with_no_header(string $which): void
 	{
 		$html = $this->renderPage(["Body{$which}" => 'A body']);
 
@@ -100,7 +101,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * would be a behaviour change for every forum using markup in these options.
 	 */
 	#[DataProvider('blocks')]
-	public function test_a_body_is_output_as_html($which)
+	public function test_a_body_is_output_as_html(string $which): void
 	{
 		$html = $this->renderPage(["Body{$which}" => '<strong>A body</strong>']);
 
@@ -112,7 +113,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * inside an `h2`, so it is output escaped. Only the body promises HTML.
 	 */
 	#[DataProvider('blocks')]
-	public function test_a_title_is_escaped_rather_than_output_as_html($which)
+	public function test_a_title_is_escaped_rather_than_output_as_html(string $which): void
 	{
 		$html = $this->renderPage(["Title{$which}" => '<em>A title</em>', "Body{$which}" => 'A body']);
 
@@ -131,7 +132,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * than disabling a row and recompiling the forum's templates.
 	 */
 	#[DataProvider('blocksWithTheirModification')]
-	public function test_without_its_modification_a_block_is_absent($which, $modificationKey)
+	public function test_without_its_modification_a_block_is_absent(string $which, string $modificationKey): void
 	{
 		$other = $which == 'Before' ? 'After' : 'Before';
 
@@ -154,7 +155,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * message is back on a page whose options are set. Every other test can only show the
 	 * message is absent, which an install difference could equally explain.
 	 */
-	public function test_without_the_add_on_xenforo_shows_its_own_no_upgrades_message()
+	public function test_without_the_add_on_xenforo_shows_its_own_no_upgrades_message(): void
 	{
 		$this->setPageOptions(['BodyBefore' => 'Before body']);
 
@@ -173,7 +174,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * here renders with nothing available, which is the case the add-on most has to get right
 	 * but says nothing about the ordering.
 	 */
-	public function test_the_blocks_sit_above_and_below_the_available_upgrades_list()
+	public function test_the_blocks_sit_above_and_below_the_available_upgrades_list(): void
 	{
 		$html = $this->renderPage(
 			['BodyBefore' => 'Before body', 'BodyAfter' => 'After body'],
@@ -189,14 +190,15 @@ class AccountUpgradesPageTest extends TestCase
 	 * above the purchased list, not below everything. That is the documented behaviour and the
 	 * reason the option is named for the available list it sits under.
 	 */
-	public function test_the_after_block_sits_above_the_purchased_upgrades_list()
+	public function test_the_after_block_sits_above_the_purchased_upgrades_list(): void
 	{
-		$visitor = $this->actingAsMember(['user_id' => 7]);
+		$userId = 7;
+		$this->actingAsMember(['user_id' => $userId]);
 
 		$html = $this->renderPage(
 			['BodyBefore' => 'Before body', 'BodyAfter' => 'After body'],
 			[],
-			[3 => $this->anUpgradeHeldBy($visitor->user_id, 'Gold member')]
+			[3 => $this->anUpgradeHeldBy($userId, 'Gold member')]
 		);
 
 		$this->assertSeeInOrder(
@@ -211,7 +213,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * needs the upgrade to exist - so this test adds no forum data and runs the same on a
 	 * forum that sells upgrades and one that does not.
 	 */
-	private function anUpgradeToPurchase($title)
+	private function anUpgradeToPurchase(string $title): Entity
 	{
 		$upgrade = $this->makeEntity('XF:UserUpgrade', [
 			'title' => $title,
@@ -237,7 +239,7 @@ class AccountUpgradesPageTest extends TestCase
 	 * left false deliberately: the payment-provider block below the date is guarded on it, and
 	 * rendering a provider's cancellation form would need a purchase request behind it.
 	 */
-	private function anUpgradeHeldBy($userId, $title)
+	private function anUpgradeHeldBy(int $userId, string $title): Entity
 	{
 		$upgrade = $this->makeEntity('XF:UserUpgrade', [
 			'title' => $title,
@@ -274,8 +276,10 @@ class AccountUpgradesPageTest extends TestCase
 	 * what it calls. A private helper of the same name is a fatal at class load rather than a
 	 * failing test, PHP method names being case-insensitive - the same shape as the `setup()`
 	 * collision with PHPUnit's `setUp()` that cost this suite an afternoon when it was written.
+	 *
+	 * @param array<string, string> $options
 	 */
-	private function setPageOptions(array $options)
+	private function setPageOptions(array $options): void
 	{
 		$defaults = ['TitleBefore' => '', 'BodyBefore' => '', 'TitleAfter' => '', 'BodyAfter' => ''];
 		$values = [];
@@ -288,7 +292,13 @@ class AccountUpgradesPageTest extends TestCase
 		$this->setOptions($values);
 	}
 
-	private function pageParams(array $available = [], array $purchased = [])
+	/**
+	 * @param array<int, Entity> $available
+	 * @param array<int, Entity> $purchased
+	 *
+	 * @return array<string, mixed> the parameters the core template reads
+	 */
+	private function pageParams(array $available = [], array $purchased = []): array
 	{
 		return [
 			'available' => $this->app()->em()->getBasicCollection($available),
@@ -297,7 +307,12 @@ class AccountUpgradesPageTest extends TestCase
 		];
 	}
 
-	private function renderPage(array $options, array $available = [], array $purchased = [])
+	/**
+	 * @param array<string, string> $options
+	 * @param array<int, Entity> $available
+	 * @param array<int, Entity> $purchased
+	 */
+	private function renderPage(array $options, array $available = [], array $purchased = []): string
 	{
 		$this->setPageOptions($options);
 

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Hampel\AccountUpgradesInfo\Setup;
 use Tests\TestCase;
+use XF\AddOn\AddOn;
 use XF\Job\FileCleanUp;
 
 /**
@@ -12,16 +13,19 @@ use XF\Job\FileCleanUp;
  */
 class SetupTest extends TestCase
 {
-	public function test_post_upgrade_queues_the_file_clean_up_on_xenforo_2_3()
+	public function test_post_upgrade_queues_the_file_clean_up_on_xenforo_2_3(): void
 	{
 		$this->fakesJobs();
 
 		$stateChanges = [];
 		$this->addOnSetup()->postUpgrade(1000070, $stateChanges);
 
-		$this->assertJobQueued(FileCleanUp::class, function (array $job)
+		$this->assertJobQueued(FileCleanUp::class, function (array $job): bool
 		{
-			return $job['execute_data']['addon_id'] === 'Hampel/AccountUpgradesInfo';
+			$executeData = $job['execute_data'];
+			$this->assertIsArray($executeData, 'the queued job carries no execute_data');
+
+			return $executeData['addon_id'] === 'Hampel/AccountUpgradesInfo';
 		});
 	}
 
@@ -30,7 +34,7 @@ class SetupTest extends TestCase
 	 * not fatal. What it does prove is that the guard is still there: delete it and the job is
 	 * queued regardless of version.
 	 */
-	public function test_post_upgrade_queues_nothing_before_xenforo_2_3()
+	public function test_post_upgrade_queues_nothing_before_xenforo_2_3(): void
 	{
 		$this->fakesJobs();
 
@@ -57,7 +61,7 @@ class SetupTest extends TestCase
 	 * the moment someone adds a step - at which point the skip has to be revisited rather than
 	 * inherited.
 	 */
-	public function test_it_declares_no_version_gated_steps()
+	public function test_it_declares_no_version_gated_steps(): void
 	{
 		$steps = [];
 
@@ -73,14 +77,18 @@ class SetupTest extends TestCase
 	}
 
 	/** Guards the test above: the pattern proves nothing if it is reading the wrong class. */
-	public function test_it_reads_this_add_on_s_setup_class()
+	public function test_it_reads_this_add_on_s_setup_class(): void
 	{
 		$this->assertContains('postUpgrade', get_class_methods(Setup::class));
 	}
 
-	private function addOnSetup()
+	private function addOnSetup(): Setup
 	{
 		$addOn = $this->app()->addOnManager()->getById('Hampel/AccountUpgradesInfo');
+
+		// getById() returns null for an add-on the forum does not have, and declares no return
+		// type, so this both checks the install and gives the constructor argument a type
+		$this->assertInstanceOf(AddOn::class, $addOn, 'this add-on is not installed on this forum');
 
 		return new Setup($addOn, $this->app());
 	}

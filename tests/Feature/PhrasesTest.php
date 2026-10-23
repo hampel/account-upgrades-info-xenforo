@@ -14,7 +14,7 @@ use Tests\TestCase;
  */
 class PhrasesTest extends TestCase
 {
-    public function test_every_phrase_this_add_on_ships_resolves()
+    public function test_every_phrase_this_add_on_ships_resolves(): void
     {
         $unresolved = [];
 
@@ -32,12 +32,13 @@ class PhrasesTest extends TestCase
     }
 
     /** Guards the test above: it asserts nothing if it never finds the phrase files. */
-    public function test_it_reads_this_add_on_s_phrases()
+    public function test_it_reads_this_add_on_s_phrases(): void
     {
         $this->assertCount(10, $this->phraseTitles());
     }
 
-    private function phraseTitles()
+    /** @return list<string> */
+    private function phraseTitles(): array
     {
         $titles = [];
 

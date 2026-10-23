@@ -1,0 +1,16 @@
+includes:
+    - vendor/hampel/xenforo-phpstan/extension.neon
+
+parameters:
+    level: max
+
+    paths:
+        - .
+
+    excludePaths:
+        analyseAndScan:
+            - vendor (?)
+        analyse:
+            - _output (?)
+            - _releases (?)
+            - _data (?)

@@ -173,6 +173,8 @@ location rather than the working directory, so the relative path below works unc
 composer install                                                           # first time; vendor/ is gitignored
 vendor/bin/phpunit                                                         # the whole suite
 vendor/bin/phpunit --filter AccountUpgradesPageTest                        # one class
+vendor/bin/phpstan analyse                                                 # static analysis, level max
+vendor/bin/xenforo-phpstan generate                                        # after a XenForo upgrade
 php ../../../../cmd.php xf-dev:import --addon=Hampel/AccountUpgradesInfo   # after editing _output/
 php ../../../../cmd.php xf-addon:sync-json Hampel/AccountUpgradesInfo      # after editing addon.json
 php ../../../../cmd.php xf:addon-upgrade Hampel/AccountUpgradesInfo        # apply a version bump
@@ -269,6 +271,50 @@ listener. `composer.json` holds dev dependencies only — nothing here uses a ru
 
 `TESTING.md` carries what the suite cannot do.
 
+## Static analysis runs at level max, and nothing is ignored
+
+`hampel/xenforo-phpstan` carries what PHPStan needs in order to see a XenForo install without
+analysing it — which paths to scan, the legacy class names 2.3 aliases at runtime, the `XFCP_`
+parent of every class extension, and the container shortcuts that take a short
+`Vendor\AddOn:Name`. That package's README is the reference; `phpstan.neon` here supplies only what
+is this add-on's: the level, the paths, and the generated directories that are not source.
+
+**`vendor/bin/xenforo-phpstan generate` writes into the forum's `internal_data/phpstan/`, not into
+this repository.** What it writes describes the install rather than the add-on, so every add-on
+analysed against that forum reads the same three files, and re-running it is how a XenForo upgrade
+or a new class extension anywhere on the forum reaches the analysis. A set generated against a
+different XenForo version is reported rather than used — the package's own guarantee, not something
+proved here.
+
+**Level max is attainable in this add-on, which is a fact about this add-on and not a house
+default.** Nine PHP files, no class extension, no entity of its own, and one `::class`; nothing in
+the repository executes when a page is served. There is no baseline and no `ignoreErrors`, so a new
+report is a new problem.
+
+**`crates.neon` is deliberately not included.** It opts entity columns, options and route
+parameters into PHPStan's object-crate treatment, which accepts any property name — silencing a
+mistyped column as readily as it allows a correct one. Nothing here needs it: the add-on declares no
+entity, XenForo's own entities carry `@property` docblocks, and `_output/option_hint.php` is
+excluded as generated rather than source.
+
+**What adopting it cost was types on the suite's own helpers, and the reason generalises: PHPStan
+does not infer a return type across a method boundary.** An untyped method returns `mixed` to every
+caller, so one untyped `renderPage()` turned every assertion reading its HTML into a `mixed` passed
+to a `string` parameter — 64 of the 131 reports came from one test class that way, every one of them
+about the suite's own plumbing rather than the add-on. Typing the helpers answered all of them.
+
+**Where a value genuinely arrives untyped, the fix is an assertion rather than a cast.** The
+redaction event collects `array<string, mixed>` by reference, `json_decode()` returns `mixed`, and
+`XF\AddOn\Manager::getById()` declares nothing, so the tests narrow with `assertIsArray()`,
+`assertIsString()`, `assertContainsOnlyString()` and `assertInstanceOf()` — each of which checks and
+narrows at once, PHPUnit annotating them `@phpstan-assert`. That is why the suite's assertion count
+rose by a third while what it tests did not change: a declaration or an artifact of the wrong shape
+is now reported rather than read as an empty one.
+
+`Setup.php`'s three empty steps `return null` explicitly for the same reason. `AbstractSetup`
+documents them as `@return null|StepResult`, so a step falling off the end is a question for the
+reader where an explicit `null` is an answer.
+
 ## Versioning
 
 Open the development cycle **before** starting work on a released version, not at the end: bump to
@@ -306,7 +352,7 @@ So verify the artifact, never the exit code:
 
 ```bash
 unzip -Z1 _releases/<file>.zip | grep -v '^upload/'          # zip root: README, CHANGELOG, LICENSE
-unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|composer\.'   # want no output
+unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|phpstan|composer\.'  # want no output
 unzip -Z1 _releases/<file>.zip | grep -E '(^|/)\.[^/]*'      # dotfiles; want no output
 ```
 
@@ -321,8 +367,8 @@ one does not get you the others:
 | kept out of | by | covers |
 |---|---|---|
 | the git repository | `.gitignore` | `_data`, `_releases/`, `vendor/`, both PHPUnit caches, `CLAUDE.local.md` |
-| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, Composer's files, the dotfiles |
-| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, Composer's files, `vendor/`, both PHPUnit caches |
+| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, the dotfiles |
+| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, `vendor/`, both PHPUnit caches |
 
 The release builder walks the filesystem and knows nothing about git, so gitignoring a file does
 **not** keep it out of the zip. A new dev-only file needs adding to all three.

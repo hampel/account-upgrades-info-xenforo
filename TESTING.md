@@ -97,6 +97,7 @@ on a working copy.
 ```bash
 composer install            # first time; vendor/ is gitignored
 vendor/bin/phpunit
+vendor/bin/phpstan analyse
 ```
 
 It covers the modifications applying and each `find` string matching exactly once, the option
@@ -216,6 +217,13 @@ render outside the test framework needs the `xf` template parameter installed by
 `XF\Pub\App` — or `$xf.options` resolves to null, every `contentcheck` sees empty content, and the
 blocks silently do not render, which looks exactly like a broken add-on.
 
+**Does static analysis pass?** `vendor/bin/phpstan analyse` runs at level max with no baseline
+and nothing ignored, so any report is a new one. It needs the generated set in the forum's
+`internal_data/phpstan/`, which `vendor/bin/xenforo-phpstan generate` writes and a XenForo upgrade
+invalidates — that command reads the forum, not this repository, and the set it writes is shared by
+every add-on analysed against the same forum. `CLAUDE.md` has why the level is max here and why
+`crates.neon` is left out.
+
 **Does the release zip exclude the development files?** Build it from a checkout with the dev
 dependencies installed, since that is the case that matters: the builder copies `vendor/` like
 anything else. `build.json` removes them before the `mv`
@@ -225,7 +233,7 @@ exit code:
 
 ```bash
 unzip -Z1 _releases/<file>.zip | grep -v '^upload/'          # want README, CHANGELOG, LICENSE
-unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|composer\.'   # want no output
+unzip -Z1 _releases/<file>.zip | grep -iE 'claude|testing|vendor/|tests/|phpunit|phpstan|composer\.'  # want no output
 unzip -Z1 _releases/<file>.zip | grep -E '(^|/)\.[^/]*'      # dotfiles; want no output
 ```
 

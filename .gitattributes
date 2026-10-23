@@ -35,6 +35,7 @@
 /TESTING.md       export-ignore
 /tests            export-ignore
 /phpunit.xml      export-ignore
+/phpstan.neon     export-ignore
 /composer.json    export-ignore
 /composer.lock    export-ignore
 /.gitattributes   export-ignore

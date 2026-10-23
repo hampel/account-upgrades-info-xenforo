@@ -12,12 +12,12 @@ use Tests\TestCase;
  */
 class TemplateModificationsTest extends TestCase
 {
-	public function test_the_block_before_the_available_list_applies()
+	public function test_the_block_before_the_available_list_applies(): void
 	{
 		$this->assertTemplateModificationApplied('hampelAccountUpgradesInfoAbove');
 	}
 
-	public function test_the_block_after_the_available_list_applies()
+	public function test_the_block_after_the_available_list_applies(): void
 	{
 		$this->assertTemplateModificationApplied('hampelAccountUpgradesInfoBelow');
 	}
@@ -28,7 +28,7 @@ class TemplateModificationsTest extends TestCase
 	 * find that matches twice inserts the block twice and still reads as applied. The count is
 	 * checked per log row, so a forum carrying several styles is not read as several matches.
 	 */
-	public function test_every_modification_this_add_on_registers_applies_once()
+	public function test_every_modification_this_add_on_registers_applies_once(): void
 	{
 		$applied = $this->assertAddOnTemplateModificationsApplyTimes(1);
 
@@ -46,7 +46,7 @@ class TemplateModificationsTest extends TestCase
 	 * rows, so it fails on an edit to `_output/` before the import that would make it real, and it
 	 * refuses rather than passes where there is no artifact to read.
 	 */
-	public function test_each_find_string_matches_the_target_template_exactly_once()
+	public function test_each_find_string_matches_the_target_template_exactly_once(): void
 	{
 		$this->assertAddOnTemplateModificationFindsMatch();
 	}
@@ -57,7 +57,7 @@ class TemplateModificationsTest extends TestCase
 	 * the previous version and every assertion passes. This is the other half, and it is the one
 	 * a commit can break on its own.
 	 */
-	public function test_the_forum_holds_every_modification_the_add_on_ships()
+	public function test_the_forum_holds_every_modification_the_add_on_ships(): void
 	{
 		$shipped = array_keys($this->shippedModifications());
 
@@ -72,13 +72,13 @@ class TemplateModificationsTest extends TestCase
 	}
 
 	/** Guards the test above: it asserts nothing if the glob finds no artifacts. */
-	public function test_it_reads_this_add_on_s_modification_artifacts()
+	public function test_it_reads_this_add_on_s_modification_artifacts(): void
 	{
 		$this->assertCount(2, $this->shippedModifications());
 	}
 
-	/** @return array<string, array> modification key => its artifact, as committed */
-	private function shippedModifications()
+	/** @return array<string, mixed> modification key => its artifact, as committed */
+	private function shippedModifications(): array
 	{
 		$modifications = [];
 		$pattern = dirname(__DIR__, 2) . '/_output/template_modifications/*/*.json';
@@ -90,7 +90,10 @@ class TemplateModificationsTest extends TestCase
 				continue;
 			}
 
-			$modifications[basename($file, '.json')] = json_decode(file_get_contents($file), true);
+			$json = file_get_contents($file);
+			$this->assertIsString($json, "could not read {$file}");
+
+			$modifications[basename($file, '.json')] = json_decode($json, true);
 		}
 
 		return $modifications;

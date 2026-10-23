@@ -9,6 +9,10 @@ class Listener
      *
      * No dependency on that add-on is created or wanted - a code event no installed add-on
      * defines is never fired, so this costs nothing on a forum without it.
+     *
+     * @param array<string, mixed> $declarations keyed by add-on id
+     *
+     * @return void
      */
     public static function adminApiRedaction(array &$declarations)
     {
