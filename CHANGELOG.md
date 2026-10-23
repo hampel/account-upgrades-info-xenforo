@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.0.3 (2026-10-23)
+
+- Declares that none of its options hold a secret, by answering the `hampel_admin_api_redaction`
+  event. A forum that collects its configuration through that event now sees what the four text
+  options are set to, rather than only whether they are set; where nothing fires the event,
+  nothing changes
+
 ## 1.0.2 (2026-09-22)
 
 - Requires XenForo 2.2.0 or later
