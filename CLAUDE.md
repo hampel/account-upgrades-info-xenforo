@@ -211,120 +211,68 @@ dependency on a service outside the forum would each reopen it.
 
 ## Tests read the forum, not the working copy
 
-The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.33` — a floor set by what
-the suite calls rather than by what was current: `assertNoTemplateErrors()`'s filter arrived in
-5.20, `renderTemplateWithoutModification()` in 5.24, and both
-`assertAddOnTemplateModificationsApplyTimes()` and
-`assertAddOnTemplateModificationFindsMatch()` in 5.33. Most of it reads the
-installed add-on out of the forum — the template modification log, the compiled
+The suite is Feature tests only, on `hampel/xenforo-test-framework` `^5.33`. **That constraint is a
+floor set by what the suite calls**, not by what was current —
+`assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`
+arrived in 5.33. Raise it when the suite starts calling something newer, and not otherwise:
+`composer update` already takes every minor it admits.
+
+**Most of it reads the installed add-on out of the forum** — the modification log, the compiled
 `account_upgrades` template, the option values, the phrase table. **An edit to `_output/` is
 invisible to those until `xf-dev:import` has run**, so a red run after editing a modification or a
 phrase usually means the import was skipped rather than that the change is wrong.
 
 **Three tests read the shipped artifacts instead, deliberately**, because that caveat is itself a
-failure nothing else catches: the two modification checks below that read
-`_output/template_modifications/`, and the secrets declaration. A modification committed without
-an import, or a `find` string edited into one that cannot match, passes every forum-reading test
-in the suite against the version the forum still holds.
+failure nothing else catches: the `find`-string match and the check that the forum holds every
+modification the add-on ships read `_output/template_modifications/`, and the secrets declaration
+reads `_output/options/`. A modification committed without an import passes every forum-reading
+test against the version the forum still holds.
 
-What it covers, each proved by breaking the behaviour and watching the named test fail:
+**`TESTING.md`'s *Automated* section lists what the suite covers**, and every item was proved by
+breaking the behaviour it names and watching the test fail. Prove a new test the same way before
+trusting its green run — and **mutate a template with a whitelisted method name** (`can…`): XenForo
+rejects any other method call at compile time, so the modification never applies, the test stays
+green for want of a mutation, and only the import's output says so.
 
-- **the modifications applied**, by `apply_count` rather than the log's `status`, which reads `ok`
-  for a `find` that matched nothing — per key, and once more for whatever the add-on registers, so
-  a modification added later is covered without being named. That second check asserts **exactly
-  once** rather than at least once, counted per log row: a `find` matching twice inserts the block
-  twice and reads as applied, while a sum over rows would count a forum's styles as matches;
-- **each `find` string matching the target template exactly once**, read from the shipped
-  artifacts rather than the forum's rows, so an edit that would stop matching or match twice fails
-  before the import that would make it real. This is the add-on's sharpest edge. The framework
-  counts as XenForo's own repository does — `substr_count()` for a `str_replace`, `preg_match_all()`
-  for a regex — and refuses rather than passes where there is no artifact to read, which is why
-  this add-on does not count them itself;
-- **the forum holding every modification the add-on ships** — the other half of the caveat above,
-  and the only one of these a commit can break on its own;
-- **the option combinations** against an empty upgrade list, **each run against both blocks**:
-  the suppressed "no purchasable upgrades" message, a title with no body rendering nothing, a body
-  with no title rendering a headerless block, the body output raw and the title escaped. The two
-  modifications are separate artifacts carrying the same markup, so a test naming only one side
-  would pass through a one-sided edit;
-- **the block ordering** against a list with something in it — the "before" block above the
-  available-upgrades list, the "after" block below it and above the purchased list. Both upgrades
-  are unsaved entities, so no forum data and no payment profile is needed;
-- **the control**, rendering each modification out through `renderTemplateWithoutModification()`:
-  its own block goes, the other add-on block stays, and XenForo's own message comes back. Nothing
-  is written and no other suite on the install is disturbed;
-- **every phrase resolves** rather than rendering as its own title, which is what XenForo shows
-  for one it cannot find. All ten are control-panel labels: no modification calls `phrase()`;
-- **the secrets declaration** names only this add-on and leaves no credential-shaped option
-  undecided — checked against `_output/options/` rather than against itself, because the
-  declaration is what has to agree with the files;
-- **`postUpgrade()`** queueing `FileCleanUp` on 2.3, and not queueing it when `\XF::$versionId` is
-  below 2.3. On a 2.3 install that second test proves the guard is present, not that 2.2 would
-  load the file;
-- **`Setup` declaring no version-gated step**, which is the assumption `TESTING.md` skips the
-  upgrade test on. Add one and that skip has to be revisited rather than inherited.
-
-`$addonsToLoad` names only this add-on. Other add-ons on a forum may vendor their own PHPUnit, and
-without the isolation its classes can resolve out of someone else's `vendor/`. It does not remove
-the template modifications, which are compiled into the database rather than applied by a
-listener. `composer.json` holds dev dependencies only — nothing here uses a runtime `vendor/`, so
+`$addonsToLoad` names only this add-on, so another add-on's vendored PHPUnit cannot resolve in its
+place. It does not remove other add-ons' template modifications, which are compiled into the
+database rather than applied at render time — which is why the template-error assertion is scoped
+to `account_upgrades`: a modification another add-on makes to the core `account_wrapper` this
+template wraps is not this add-on's to answer for. `composer.json` holds dev dependencies only, so
 `vendor/` must never reach a release.
 
 `TESTING.md` carries what the suite cannot do.
 
 ## Static analysis runs at level max, and nothing is ignored
 
-`hampel/xenforo-phpstan` carries what PHPStan needs in order to see a XenForo install without
-analysing it — which paths to scan, the legacy class names 2.3 aliases at runtime, the `XFCP_`
-parent of every class extension, and the container shortcuts that take a short
-`Vendor\AddOn:Name`. That package's README is the reference; `phpstan.neon` here supplies only what
-is this add-on's: the level, the paths, and the generated directories that are not source.
+`hampel/xenforo-phpstan` gives PHPStan what it needs to see a XenForo install without analysing it,
+and that package's README is the reference. `phpstan.neon` here supplies only the level, the paths
+and the generated directories that are not source. **There is no baseline and no `ignoreErrors`,
+so a new report is a new problem.** Level max is attainable because the add-on is a handful of PHP
+files with no class extension and no entity of its own — a fact about this add-on, not a house
+default.
 
 **`vendor/bin/xenforo-phpstan generate` writes into the forum's `internal_data/phpstan/`, not into
-this repository.** What it writes describes the install rather than the add-on, so every add-on
-analysed against that forum reads the same three files, and re-running it is how a XenForo upgrade
-or a new class extension anywhere on the forum reaches the analysis.
+this repository**, and every add-on analysed against that forum reads the same files. Ask
+`generate --check` first: it writes nothing, and exits 0 when the set is current or 1 naming why it
+is missing or stale. Re-run `generate` after a XenForo upgrade, or after a class extension is added
+or removed anywhere on the forum.
 
-**Ask before writing: `generate --check` answers whether that set is current and writes nothing.**
-It exits 0 naming the generation date and the counts, and 1 with the reason when the set is
-missing, stale or from an older release of the package — so a second add-on on the same forum can
-establish that the set is good without rewriting shared state that another add-on's analysis is
-reading. A stale set is reported rather than used either way, because PHPStan refuses to start on
-one; the check is how you find that out without running an analysis to see whether it throws.
+**`crates.neon` is deliberately not included.** It accepts any property name on entity columns,
+options and route parameters — a mistyped column as readily as a correct one — and nothing here
+needs it.
 
-**Level max is attainable in this add-on, which is a fact about this add-on and not a house
-default.** Nine PHP files, no class extension, no entity of its own, and one `::class`; nothing in
-the repository executes when a page is served. There is no baseline and no `ignoreErrors`, so a new
-report is a new problem.
+**Type the suite's own helpers.** PHPStan does not infer a return type across a method boundary,
+so an untyped helper returns `mixed` to every caller; at adoption one untyped `renderPage()`
+accounted for 64 of 131 reports. **Where a value genuinely arrives untyped** — the redaction
+event's `array<string, mixed>`, `json_decode()` — **narrow it with an assertion, not a cast**:
+`assertIsArray()`, `assertIsString()` and `assertContainsOnlyString()` check and narrow at once, so
+a malformed artifact is reported rather than read as an empty one. `SetupTest`'s
+`assertInstanceOf()` consumes the `null` that `AddOn\Manager::getById()` can return; it asserts a
+real precondition and is not always-true.
 
-**`crates.neon` is deliberately not included.** It opts entity columns, options and route
-parameters into PHPStan's object-crate treatment, which accepts any property name — silencing a
-mistyped column as readily as it allows a correct one. Nothing here needs it: the add-on declares no
-entity, XenForo's own entities carry `@property` docblocks, and `_output/option_hint.php` is
-excluded as generated rather than source.
-
-**What adopting it cost was types on the suite's own helpers, and the reason generalises: PHPStan
-does not infer a return type across a method boundary.** An untyped method returns `mixed` to every
-caller, so one untyped `renderPage()` turned every assertion reading its HTML into a `mixed` passed
-to a `string` parameter — 64 of the 131 reports came from one test class that way, every one of them
-about the suite's own plumbing rather than the add-on. Typing the helpers answered all of them.
-
-**Where a value genuinely arrives untyped, the fix is an assertion rather than a cast.** The
-redaction event collects `array<string, mixed>` by reference and `json_decode()` returns `mixed`, so
-the tests narrow with `assertIsArray()`, `assertIsString()` and `assertContainsOnlyString()` — each
-of which checks and narrows at once, PHPUnit annotating them `@phpstan-assert`. That is why the
-suite's assertion count rose by a third while what it tests did not change: a declaration or an
-artifact of the wrong shape is now reported rather than read as an empty one.
-
-**`SetupTest`'s `assertInstanceOf()` is the same shape for a different reason**, and worth not
-mistaking for the above: `XF\AddOn\Manager::getById()` returns the add-on or `null`, so the
-assertion consumes the `null` rather than an undeclared return, and it would be doing that even if
-nothing here were analysed. It says the add-on is installed on this forum, which is a real
-precondition of constructing its `Setup`.
-
-`Setup.php`'s three empty steps `return null` explicitly for the same reason. `AbstractSetup`
-documents them as `@return null|StepResult`, so a step falling off the end is a question for the
-reader where an explicit `null` is an answer.
+`Setup.php`'s three empty steps `return null` explicitly. `AbstractSetup` documents them as
+`@return null|StepResult`, and an explicit `null` tells a reader the step is empty on purpose.
 
 ## Versioning
 
@@ -344,7 +292,7 @@ available at all, because `AddOn::canUpgrade()` requires a strictly greater `ver
 
 `build.json` has no `additional_files` and no Composer step. Its `exec` lines delete the dev-only
 files from the upload tree — Composer's files, `phpunit.xml`, `tests/`, the whole `vendor/`, both
-PHPUnit cache names and the three dev-only root documents — and then move every remaining root
+PHPUnit cache names and the four dev-only root documents — and then move every remaining root
 `*.md` out of it, so `README`, `CHANGELOG` and `LICENSE` land at the zip root rather than being
 uploaded to a user's server.
 
@@ -377,16 +325,18 @@ one does not get you the others:
 
 | kept out of | by | covers |
 |---|---|---|
-| the git repository | `.gitignore` | `_data`, `_releases/`, `vendor/`, both PHPUnit caches, `CLAUDE.local.md` |
-| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, the dotfiles |
-| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, `vendor/`, both PHPUnit caches |
+| the git repository | `.gitignore` | `_data`, `_releases/`, `vendor/`, both PHPUnit caches, `CLAUDE.local.md`, `HISTORY.local.md` |
+| `git archive` output (GitHub "Download ZIP") | `.gitattributes` `export-ignore` | both Claude files, `HISTORY.local.md`, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, the dotfiles |
+| the XenForo release zip | `build.json` `exec` `rm` | both Claude files, `HISTORY.local.md`, `TESTING.md`, `tests/`, `phpunit.xml`, `phpstan.neon`, Composer's files, `vendor/`, both PHPUnit caches |
 
 The release builder walks the filesystem and knows nothing about git, so gitignoring a file does
 **not** keep it out of the zip. A new dev-only file needs adding to all three.
 
 `CLAUDE.md` is committed and public; anything specific to one machine — install paths, host names,
-release history, working notes — belongs in the gitignored `CLAUDE.local.md` instead. The test is
-whether it would still be true for someone who cloned only this repository.
+release history, working notes — belongs in the gitignored `CLAUDE.local.md` instead, and the
+running record of how things got that way in `HISTORY.local.md`, which is gitignored too and is not
+loaded into a session automatically. The test is whether it would still be true for someone who
+cloned only this repository.
 
 ## Line endings
 

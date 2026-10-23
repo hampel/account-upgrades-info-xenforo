@@ -27,11 +27,12 @@
 
 # Keep development-only files out of `git archive` output - GitHub's "Download ZIP".
 # This is one of three separate exclusion surfaces and covers none of the others:
-#   the git repo        -> .gitignore       (CLAUDE.local.md)
+#   the git repo        -> .gitignore       (CLAUDE.local.md, HISTORY.local.md)
 #   git archive output  -> here
 #   the XenForo zip     -> build.json `rm`  (the builder walks the filesystem, not git)
 /CLAUDE.md        export-ignore
 /CLAUDE.local.md  export-ignore
+/HISTORY.local.md export-ignore
 /TESTING.md       export-ignore
 /tests            export-ignore
 /phpunit.xml      export-ignore
