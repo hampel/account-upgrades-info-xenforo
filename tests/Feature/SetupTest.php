@@ -86,8 +86,8 @@ class SetupTest extends TestCase
 	{
 		$addOn = $this->app()->addOnManager()->getById('Hampel/AccountUpgradesInfo');
 
-		// getById() returns null for an add-on the forum does not have, and declares no return
-		// type, so this both checks the install and gives the constructor argument a type
+		// getById() returns the add-on or null, so this both checks that the add-on is installed
+		// on this forum and gives the constructor argument a non-null type
 		$this->assertInstanceOf(AddOn::class, $addOn, 'this add-on is not installed on this forum');
 
 		return new Setup($addOn, $this->app());

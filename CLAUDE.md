@@ -304,12 +304,17 @@ to a `string` parameter — 64 of the 131 reports came from one test class that 
 about the suite's own plumbing rather than the add-on. Typing the helpers answered all of them.
 
 **Where a value genuinely arrives untyped, the fix is an assertion rather than a cast.** The
-redaction event collects `array<string, mixed>` by reference, `json_decode()` returns `mixed`, and
-`XF\AddOn\Manager::getById()` declares nothing, so the tests narrow with `assertIsArray()`,
-`assertIsString()`, `assertContainsOnlyString()` and `assertInstanceOf()` — each of which checks and
-narrows at once, PHPUnit annotating them `@phpstan-assert`. That is why the suite's assertion count
-rose by a third while what it tests did not change: a declaration or an artifact of the wrong shape
-is now reported rather than read as an empty one.
+redaction event collects `array<string, mixed>` by reference and `json_decode()` returns `mixed`, so
+the tests narrow with `assertIsArray()`, `assertIsString()` and `assertContainsOnlyString()` — each
+of which checks and narrows at once, PHPUnit annotating them `@phpstan-assert`. That is why the
+suite's assertion count rose by a third while what it tests did not change: a declaration or an
+artifact of the wrong shape is now reported rather than read as an empty one.
+
+**`SetupTest`'s `assertInstanceOf()` is the same shape for a different reason**, and worth not
+mistaking for the above: `XF\AddOn\Manager::getById()` returns the add-on or `null`, so the
+assertion consumes the `null` rather than an undeclared return, and it would be doing that even if
+nothing here were analysed. It says the add-on is installed on this forum, which is a real
+precondition of constructing its `Setup`.
 
 `Setup.php`'s three empty steps `return null` explicitly for the same reason. `AbstractSetup`
 documents them as `@return null|StepResult`, so a step falling off the end is a question for the
