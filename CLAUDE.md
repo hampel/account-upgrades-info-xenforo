@@ -174,6 +174,7 @@ composer install                                                           # fir
 vendor/bin/phpunit                                                         # the whole suite
 vendor/bin/phpunit --filter AccountUpgradesPageTest                        # one class
 vendor/bin/phpstan analyse                                                 # static analysis, level max
+vendor/bin/xenforo-phpstan generate --check                                # is the forum's set current?
 vendor/bin/xenforo-phpstan generate                                        # after a XenForo upgrade
 php ../../../../cmd.php xf-dev:import --addon=Hampel/AccountUpgradesInfo   # after editing _output/
 php ../../../../cmd.php xf-addon:sync-json Hampel/AccountUpgradesInfo      # after editing addon.json
@@ -282,9 +283,14 @@ is this add-on's: the level, the paths, and the generated directories that are n
 **`vendor/bin/xenforo-phpstan generate` writes into the forum's `internal_data/phpstan/`, not into
 this repository.** What it writes describes the install rather than the add-on, so every add-on
 analysed against that forum reads the same three files, and re-running it is how a XenForo upgrade
-or a new class extension anywhere on the forum reaches the analysis. A set generated against a
-different XenForo version is reported rather than used — the package's own guarantee, not something
-proved here.
+or a new class extension anywhere on the forum reaches the analysis.
+
+**Ask before writing: `generate --check` answers whether that set is current and writes nothing.**
+It exits 0 naming the generation date and the counts, and 1 with the reason when the set is
+missing, stale or from an older release of the package — so a second add-on on the same forum can
+establish that the set is good without rewriting shared state that another add-on's analysis is
+reading. A stale set is reported rather than used either way, because PHPStan refuses to start on
+one; the check is how you find that out without running an analysis to see whether it throws.
 
 **Level max is attainable in this add-on, which is a fact about this add-on and not a house
 default.** Nine PHP files, no class extension, no entity of its own, and one `::class`; nothing in

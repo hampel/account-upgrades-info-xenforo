@@ -221,7 +221,8 @@ blocks silently do not render, which looks exactly like a broken add-on.
 and nothing ignored, so any report is a new one. It needs the generated set in the forum's
 `internal_data/phpstan/`, which `vendor/bin/xenforo-phpstan generate` writes and a XenForo upgrade
 invalidates — that command reads the forum, not this repository, and the set it writes is shared by
-every add-on analysed against the same forum. `CLAUDE.md` has why the level is max here and why
+every add-on analysed against the same forum, so ask with `generate --check` (read-only, exit 0 when
+current) before reaching for `generate` itself. `CLAUDE.md` has why the level is max here and why
 `crates.neon` is left out.
 
 **Does the release zip exclude the development files?** Build it from a checkout with the dev
