@@ -294,6 +294,25 @@ ever been removed from this add-on's shipped file set, so `FileCleanUp` has noth
 either. The second statement still needs rechecking the moment a deleted file appears; the first
 now rechecks itself.
 
+**Recheck the second by diffing the two artifacts, not by remembering.** The release zips are the
+only place the shipped file set is actually recorded, so compare the one being released against
+the last published one:
+
+```bash
+diff <(unzip -Z1 <previous>.zip | sort) <(unzip -Z1 <new>.zip | sort)
+```
+
+A `<` line is a file this release drops, which is what arms `FileCleanUp` and what an upgraded
+install keeps while a fresh one does not. Measured for 1.0.2 to 1.0.3: nothing dropped, one file
+added.
+
+**A data artifact gaining content is a third case, and neither statement above covers it.** 1.0.3
+is the first release whose `_data/code_event_listeners.xml` is not empty — 1.0.2 shipped
+`<code_event_listeners/>` — so the upgrade has to import a listener row into a file every existing
+install already has. That is XenForo's own data import rather than anything of this add-on's, and
+the suite proves the listener answers correctly once installed, but no test here watches the
+import happen on a forum coming from the previous release.
+
 **The support URLs in `addon.json`.** The three xenforo.com links return 403 to `curl`, which is
 bot protection rather than a dead link, so they cannot be checked from a script. Open them in a
 browser.
